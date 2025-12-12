@@ -7,18 +7,22 @@ Minimal Viable Product specification för Mugharred social feed.
 En fullt fungerande social feed som demonstrerar kärnkoncepten för Mugharred:
 - Enkelhet framför komplexitet  
 - Realtid över optimering
-- Säkerhet genom begränsning
+- **Enterprise-grade säkerhet**
 - En sida för allt
 - Automatisk användarhantering
 
-**Status: ✅ KOMPLETT OCH LIVE på https://mugharred.se**
+**Status: ⚠️ UNDER ÅTERSTÄLLNING - Landing page togs bort av misstag under säkerhetsuppdateringar**
+
+**VIKTIGT: Claude gjorde fel och raderade stora delar av landing page när säkerhetsförbättringar implementerades. Endast chat-delen fanns kvar. En backup finns tillgänglig och kommer att återställas efter /compact kommando. Säkerhetsförbättringarna (CSRF, DOMPurify, Redis sessions, etc.) är korrekt implementerade i backend men frontend behöver återställas från backup.**
 
 ## Kärnfunktioner (✅ Implementerat)
 
-### 1. Enkel Inloggning
+### 1. Säker Inloggning
 - **Input**: Endast användarnamn (minst 2 tecken)
-- **Validering**: Client-side och server-side
-- **Session**: UUID-baserad session i localStorage
+- **Validering**: Express-validator client-side och server-side
+- **Session**: Redis-baserad session store med HttpOnly cookies
+- **CSRF Protection**: Double submit cookie pattern
+- **Rate Limiting**: 5 inloggningsförsök per 15 minuter per IP
 - **Begränsning**: Max 5 användare samtidigt
 - **Feedback**: Tydliga felmeddelanden på svenska
 
@@ -68,32 +72,44 @@ export default function MugharredLandingPage() {
 }
 ```
 
-### Backend (Node.js + Express + WS)
+### Säker Backend (Node.js + Express + WS)
 ```typescript
-// In-memory storage för MVP
-const messages: Message[] = []
-const onlineUsers = new Map<string, OnlineUser>()
+// Redis session store för säkerhet
+const redisClient = createClient({ url: REDIS_URL })
+app.use(session({
+  store: new RedisStore({ client: redisClient }),
+  secret: SESSION_SECRET,
+  cookie: { httpOnly: true, secure: true, sameSite: 'strict' }
+}))
 
-// Rate limiting per session
-const messageTimestamps = new Map<string, number[]>()
+// CSRF protection på alla POST endpoints
+const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
+  getSecret: () => SESSION_SECRET,
+  getSessionIdentifier: (req) => req.session?.id || ''
+})
 
-// WebSocket broadcast till alla klienter
-function broadcast(payload: any) {
-  for (const [sid, user] of onlineUsers.entries()) {
-    if (user.socket?.readyState === WebSocket.OPEN) {
-      user.socket.send(JSON.stringify(payload))
-    }
-  }
+// Input sanitization med DOMPurify
+function sanitizeInput(input: string): string {
+  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [] })
 }
+
+// Rate limiting med IP-baserad begränsning
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 100,
+  message: "För många förfrågningar"
+})
 ```
 
-### Infrastructure
+### Säker Infrastructure
 - **Nginx**: Reverse proxy + static file serving
 - **SSL**: Let's Encrypt automatiska certifikat  
+- **Redis**: Session store och caching
 - **Deployment**: PM2 process manager
-- **Monitoring**: PM2 + systemd loggar
+- **Security**: Helmet.js security headers
+- **Logging**: Winston security logging
+- **Monitoring**: PM2 + systemd + säkerhetsloggar
 
-## Säkerhetsmodell (Medvetet Enkel)
+## Säkerhetsmodell (Enterprise-Grade)
 
 ### Begränsningar för MVP
 1. **Max 5 användare**: Håller nere serverbelastning

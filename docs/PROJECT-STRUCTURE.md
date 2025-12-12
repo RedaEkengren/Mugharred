@@ -10,13 +10,13 @@ Detta dokument beskriver hur den nuvarande live installationen är organiserad.
 
 ```
 mugharred/
-├── 📁 backend/              # Node.js backend server
+├── 📁 backend/              # Säker Node.js backend server
 ├── 📁 docs/                 # Projektdokumentation
 ├── 📁 frontend/             # Production frontend build
-├── 📁 src/                  # Frontend källkod (React)
+├── 📁 src/                  # Frontend källkod (React + Security)
 ├── 📄 .gitignore           # Git ignore patterns
 ├── 📄 README.md            # Huvuddokumentation
-├── 📄 package.json         # Frontend dependencies och scripts
+├── 📄 package.json         # Frontend dependencies (inkl. DOMPurify)
 ├── 📄 tsconfig.json        # TypeScript konfiguration (frontend)
 ├── 📄 tailwind.config.js   # Tailwind CSS konfiguration
 ├── 📄 postcss.config.js    # PostCSS konfiguration
@@ -28,24 +28,36 @@ mugharred/
 
 ```
 backend/
-├── 📁 src/                  # TypeScript källkod
-│   └── 📄 server.ts         # Huvud server fil (Express + WebSocket)
+├── 📁 src/                  # Säker TypeScript källkod
+│   ├── 📄 server.ts         # Säker server (Express + WebSocket + Security)
+│   └── 📄 types.ts          # TypeScript definitioner
 ├── 📁 dist/                 # Kompilerad JavaScript (genererad)
-├── 📁 logs/                 # Server loggar (PM2)
-├── 📄 package.json          # Backend dependencies
+├── 📁 logs/                 # Winston säkerhetsloggar
+│   ├── 📄 combined.log      # Alla händelser
+│   └── 📄 error.log         # Endast fel
+├── 📄 package.json          # Backend dependencies (Security stack)
 ├── 📄 tsconfig.json         # TypeScript config för backend
-└── 📄 .env                  # Environment variabler
+├── 📄 .env                  # Environment variabler (SECRETS)
+└── 📄 .env.example          # Environment mall
 ```
 
 ### Backend Filer
 
-#### `src/server.ts`
-- Express server setup
-- WebSocket hantering
-- API endpoints (/api/login, /api/messages, etc.)
-- In-memory storage för meddelanden och användare
-- Rate limiting logik
-- CORS konfiguration
+#### `src/server.ts` (Säker)
+- **Security Stack**: Helmet, CSRF, Rate Limiting, Input Validation
+- **Session Management**: Redis store, HttpOnly cookies
+- **Express server setup** med trust proxy konfiguration
+- **WebSocket hantering** med autentisering
+- **API endpoints** med CSRF protection:
+  - `GET /api/csrf-token` - CSRF token
+  - `POST /api/login` - Säker inloggning
+  - `POST /api/logout` - Säker utloggning
+  - `GET /api/messages` - Hämta meddelanden (auth required)
+  - `GET /api/online-users` - Online användare (auth required)
+- **Redis session storage** för skalbarhet
+- **Input sanitization** med DOMPurify
+- **Winston logging** för säkerhetshändelser
+- **Rate limiting** per IP och endpoint
 
 #### `package.json`
 ```json
@@ -74,21 +86,26 @@ src/
 - DOM mounting
 - Strict mode wrapper
 
-#### `MugharredLandingPage.tsx`
+#### `MugharredLandingPage.tsx` (Säker)
+- **Security Features**:
+  - SecureAPI klass för CSRF-skyddade requests
+  - DOMPurify input sanitization
+  - Säker autentisering med HttpOnly cookies
 - **Landing Page State**: Icke-inloggade användare
   - Hero sektion med beskrivning
-  - Features showcase
-  - Login formulär
+  - Features showcase med säkerhetsinformation
+  - Säker login formulär
 - **Live Feed State**: Inloggade användare  
-  - Header med logout
+  - Header med säker logout
   - Online users lista
-  - Message input
+  - Message input med sanitization
   - Virtual scrolled feed
-  - Message modal
+  - Message modal med sanitized content
 - **Shared Logic**:
-  - WebSocket hantering
+  - Säker WebSocket hantering
   - State management
   - Virtual scroll implementation
+  - CSRF token management
 
 #### `index.css`
 ```css

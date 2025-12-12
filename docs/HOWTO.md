@@ -21,6 +21,9 @@ Detta är din guide för att arbeta med den live Mugharred installationen.
 
 2. **Daglig användning:**
    ```bash
+   # Starta Redis för sessionslagring
+   sudo systemctl start redis-server
+   
    # Terminal 1 - Frontend dev server
    npm run dev
    
@@ -135,17 +138,24 @@ npx playwright test
 
 2. **Manuell deploy:**
    ```bash
-   # Bygg frontend
+   # Kontrollera att Redis körs
+   redis-cli ping
+   
+   # Bygg frontend med säkerhetsuppdateringar
    npm run build
    cp -r dist/* frontend/dist/
    
-   # Bygg backend
+   # Bygg säker backend
    cd backend && npm run build && cd ..
    
-   # Starta om backend
+   # Starta om backend med nya säkerhetsfunktioner
    pm2 restart mugharred-backend
    # eller
    sudo systemctl restart mugharred
+   
+   # Testa säkerhetsendpoints
+   curl https://mugharred.se/api/csrf-token
+   curl https://mugharred.se/health
    ```
 
 ### Monitoring och Loggar
@@ -238,29 +248,104 @@ pm2 start mugharred-backend
 
 ### Säkerhets Inställningar
 
-1. **Ändra max användare:**
+#### Enterprise Security Features (Aktiv)
+
+Mugharred använder nu enterprise-grad säkerhet:
+
+1. **Redis Session Store:**
+   ```bash
+   # Kontrollera Redis status
+   redis-cli ping
+   systemctl status redis-server
+   
+   # Konfigurera Redis lösenord (rekommenderat)
+   sudo nano /etc/redis/redis.conf
+   # Lägg till: requirepass ditt_starka_lösenord
+   sudo systemctl restart redis-server
+   ```
+
+2. **CSRF Protection:**
+   ```bash
+   # Testa CSRF endpoint
+   curl https://mugharred.se/api/csrf-token
+   # Svar: {"csrfToken":"..."}
+   
+   # Alla POST requests kräver X-CSRF-Token header
+   ```
+
+3. **Security Headers:**
+   ```bash
+   # Kontrollera säkerhetsheaders
+   curl -I https://mugharred.se
+   # Ska inkludera:
+   # X-Content-Type-Options: nosniff
+   # X-Frame-Options: DENY
+   # X-XSS-Protection: 1; mode=block
+   ```
+
+4. **Rate Limiting:**
+   ```typescript
+   // API rate limiting (backend/src/server.ts)
+   const apiLimiter = rateLimit({
+     windowMs: 15 * 60 * 1000, // 15 minuter
+     max: 100 // 100 requests per IP
+   });
+   
+   // Auth rate limiting
+   const authLimiter = rateLimit({
+     windowMs: 15 * 60 * 1000,
+     max: 5 // 5 inloggningsförsök per IP
+   });
+   ```
+
+5. **Input Sanitization:**
+   ```typescript
+   // DOMPurify används automatiskt på alla inputs
+   // Backend: sanitizeInput(userInput)
+   // Frontend: DOMPurify.sanitize(message.text)
+   ```
+
+6. **Säkerhetsloggning:**
+   ```bash
+   # Visa säkerhetsloggar
+   tail -f backend/logs/error.log
+   tail -f backend/logs/combined.log
+   
+   # Övervaka misslyckade inloggningsförsök
+   grep "Unauthorized access" backend/logs/combined.log
+   ```
+
+#### Konfigurera Säkerhetsinställningar
+
+1. **Ändra session secrets (.env):**
+   ```bash
+   # Generera starka secrets
+   openssl rand -base64 32
+   
+   # Uppdatera backend/.env
+   SESSION_SECRET=din_starka_session_secret
+   JWT_SECRET=din_starka_jwt_secret
+   ```
+
+2. **Ändra max användare:**
    ```typescript
    // I backend/src/server.ts
    const MAX_ONLINE_USERS = 10; // Ändra från 5 till 10
    ```
 
-2. **Ändra rate limiting:**
+3. **Ändra rate limiting:**
    ```typescript
    // I backend/src/server.ts
    const MAX_MSG_PER_WINDOW = 10; // Ändra från 5
    const WINDOW_MS = 5_000;       // Ändra från 10 sekunder till 5
    ```
 
-3. **Ändra inaktivitets timeout:**
+4. **Ändra session timeout:**
    ```typescript
-   // I backend/src/server.ts
-   const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Ändra från 5 till 10 minuter
-   ```
-
-3. **Meddelande längd:**
-   ```typescript
-   // I backend/src/server.ts
-   if (!text || text.length > 1000) return; // Ändra från 500 till 1000
+   // I backend/src/server.ts session config
+   cookie: {
+     maxAge: 1000 * 60 * 60, // Ändra från 30 min till 1 timme
+   }
    ```
 
 ### Nginx Optimering

@@ -11,6 +11,7 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 ### Server Krav
 - Ubuntu 20.04+ eller liknande Linux distribution
 - Node.js 18+
+- Redis server (för sessions)
 - Nginx
 - SSL certifikat (Let's Encrypt)
 - Minst 1GB RAM
@@ -20,8 +21,10 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 - **Server**: Ubuntu 20.04 LTS med Nginx reverse proxy
 - **Domain**: mugharred.se (SSL aktiv)
 - **SSL**: Let's Encrypt automatiska certifikat (förnyade automatiskt)
-- **Frontend**: Statiska React build serverade av Nginx
+- **Frontend**: Statiska React build med XSS-skydd
 - **Backend**: Node.js TypeScript process på port 3001
+- **Database**: Redis för sessionslagring
+- **Security**: Enterprise-grade säkerhetsimplementering
 - **Process Manager**: PM2 med auto-restart
 - **Status**: ✅ Stabil och live sedan December 12, 2025
 
@@ -33,8 +36,20 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 # Gå till backend mappen
 cd backend
 
-# Installera dependencies
+# Installera dependencies (inkluderar säkerhetspaket)
 npm install
+
+# Konfigurera miljövariabler
+cp .env.example .env
+# Redigera .env med produktionsvärden:
+# NODE_ENV=production
+# SESSION_SECRET=<stark-slumpmässig-sträng>
+# JWT_SECRET=<stark-slumpmässig-sträng>
+# REDIS_URL=redis://localhost:6379
+
+# Starta Redis server
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
 
 # Bygg TypeScript
 npm run build

@@ -13,14 +13,15 @@ Version: MVP 1.0
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| Frontend | 🟢 LIVE | React SPA deployed via Nginx |
+| Frontend | 🟢 LIVE | React SPA med XSS-skydd (DOMPurify) |
 | Backend | 🟢 LIVE | Node.js TypeScript server (PM2) |
-| Database | 🟢 LIVE | In-memory storage (MVP appropriate) |
+| Security | 🟢 LIVE | Redis sessions + CSRF + sanitization |
+| Database | 🟢 LIVE | Redis session store + in-memory cache |
 | WebSockets | 🟢 LIVE | Real-time messaging active |
 | SSL/HTTPS | 🟢 LIVE | Let's Encrypt auto-renewal |
 | Domain | 🟢 LIVE | mugharred.se pointing correctly |
 | Auto-logout | 🟢 LIVE | 5-minute inactivity timeout |
-| Rate Limiting | 🟢 LIVE | 5 messages/10 seconds |
+| Rate Limiting | 🟢 LIVE | Express-rate-limit (IP-based) |
 | User Limit | 🟢 LIVE | Max 5 concurrent users |
 
 ### System Architecture
@@ -56,22 +57,44 @@ Static Files (React Build)
 
 ## Security Implementation ✅
 
-### MVP Security Model
-1. **User Limits**: Maximum 5 simultaneous users
-2. **Rate Limiting**: 5 messages per 10-second window per user
-3. **Input Validation**: 
-   - Username: 2-50 characters
-   - Messages: 1-500 characters
-4. **Auto-logout**: Inactive users removed after 5 minutes
-5. **Session Management**: UUID-based sessions in memory
-6. **No Persistence**: Data cleared on server restart (by design)
+### Enterprise-Grade Security
+1. **Session Security**: 
+   - Redis-based session store
+   - HttpOnly cookies with SameSite=strict
+   - Secure cookies in production (HTTPS)
+   - 30-minute session expiry
+2. **CSRF Protection**: 
+   - Double submit cookie pattern
+   - All POST requests require valid CSRF token
+   - Token rotation on each request
+3. **Input Sanitization**: 
+   - DOMPurify sanitization client & server-side
+   - Express-validator for all inputs
+   - XSS protection on all user content
+4. **Rate Limiting**: 
+   - IP-based rate limiting (100 req/15min)
+   - Authentication rate limiting (5 attempts/15min)
+   - Message rate limiting (5 msgs/10sec)
+5. **Security Headers**: 
+   - Helmet.js for comprehensive header security
+   - Content Security Policy
+   - HSTS, X-Frame-Options, etc.
+6. **Authentication & Authorization**:
+   - Secure session management
+   - Auto-logout after 5 minutes inactivity
+   - User limits: Maximum 5 simultaneous users
+7. **Logging & Monitoring**:
+   - Winston security logging
+   - Failed authentication tracking
+   - Suspicious activity detection
 
 ### Infrastructure Security
 - HTTPS-only (HTTP redirects to HTTPS)
-- Security headers via Nginx
+- Security headers via Nginx + Helmet
 - CORS properly configured
-- No sensitive data storage
-- Regular server updates
+- Trust proxy for accurate IP detection
+- Redis password protection
+- Regular security updates
 
 ## Performance Metrics 📊
 
@@ -97,22 +120,32 @@ Static Files (React Build)
 ```bash
 # System health
 curl https://mugharred.se/health
-# Response: {"status":"ok","online":N,"messages":N}
+# Response: {"status":"ok","timestamp":N}
 
 # PM2 status
 pm2 status
 # Should show mugharred-backend as "online"
 
-# SSL certificate
+# Redis connection
+redis-cli ping
+# Should return "PONG"
+
+# Security headers check
 curl -I https://mugharred.se
-# Should return 200 OK with security headers
+# Should include: X-Content-Type-Options, X-Frame-Options, etc.
+
+# CSRF endpoint
+curl https://mugharred.se/api/csrf-token
+# Should return {"csrfToken":"..."}
 ```
 
 ### Log Locations
 - **Backend Logs**: `pm2 logs mugharred-backend`
+- **Security Logs**: `backend/logs/error.log` och `backend/logs/combined.log`
 - **Nginx Access**: `/var/log/nginx/mugharred.access.log`
 - **Nginx Errors**: `/var/log/nginx/mugharred.error.log`
 - **SSL Renewal**: `/var/log/letsencrypt/`
+- **Redis Logs**: `journalctl -u redis-server`
 
 ## User Experience 🎯
 

@@ -3,12 +3,14 @@ import {
   ArrowRight, Shield, Zap, Users, MessageSquareText, Globe2, Send, X, 
   CheckCircle2, AlertCircle, Loader2, WifiOff, Menu, LogOut, Clock, Eye
 } from "lucide-react";
+import DOMPurify from "dompurify";
 
 type Message = {
   id: string;
   user: string;
   text: string;
   timestamp: number;
+  sanitized?: boolean;
 };
 
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
@@ -16,6 +18,52 @@ type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 const ROW_HEIGHT = 88; // Increased for better mobile touch targets
 const PAGE_SIZE = 10;
 const ANIMATION_DELAY_UNIT = 0.1;
+
+// Secure API utilities for CSRF protection
+class SecureAPI {
+  private static csrfToken: string = '';
+
+  static async getCsrfToken(): Promise<string> {
+    if (this.csrfToken) return this.csrfToken;
+    
+    try {
+      const response = await fetch('/api/csrf-token', {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        this.csrfToken = data.csrfToken;
+        return this.csrfToken;
+      }
+    } catch (error) {
+      console.error('Failed to get CSRF token:', error);
+    }
+    
+    return '';
+  }
+
+  static async secureRequest(url: string, options: RequestInit = {}): Promise<Response> {
+    const token = await this.getCsrfToken();
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': token,
+      ...options.headers,
+    };
+
+    return fetch(url, {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
+  }
+
+  static clearToken() {
+    this.csrfToken = '';
+  }
+}
 
 // Toast notification component
 function Toast({ message, type, onClose }: { 
@@ -139,20 +187,20 @@ export default function MugharredLandingPage() {
     setLoginState('loading');
 
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+      const sanitizedName = DOMPurify.sanitize(trimmed);
+      const response = await SecureAPI.secureRequest('/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ name: sanitizedName }),
       });
       
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
         setLoginError(body.error || "Inloggning misslyckades");
         setLoginState('error');
         return;
       }
       
-      const data = await res.json();
+      const data = await response.json();
       setLoginState('success');
       
       // Small delay for success animation
@@ -160,11 +208,13 @@ export default function MugharredLandingPage() {
         setSessionId(data.sessionId);
         localStorage.setItem("mugharred_session", data.sessionId);
         localStorage.setItem("mugharred_name", data.name);
+        setToast({ message: `Välkommen ${sanitizedName}!`, type: 'success' });
       }, 500);
       
     } catch (err) {
       setLoginError("Kunde inte ansluta till servern");
       setLoginState('error');
+      setToast({ message: "Nätverksfel. Försök igen.", type: 'error' });
     }
   }
 
@@ -173,6 +223,7 @@ export default function MugharredLandingPage() {
     try {
       const res = await fetch(
         `/api/messages?offset=${offset}&limit=${PAGE_SIZE}`,
+        { credentials: 'include' }
       );
       const data = await res.json();
       setTotalMessages(data.total);
@@ -180,7 +231,16 @@ export default function MugharredLandingPage() {
         const existingIds = new Set(prev.map((m) => m.id));
         const merged = [...prev];
         for (const m of data.items) {
-          if (!existingIds.has(m.id)) merged.push(m);
+          if (!existingIds.has(m.id)) {
+            // Sanitize message content
+            const sanitizedMessage = {
+              ...m,
+              text: DOMPurify.sanitize(m.text),
+              user: DOMPurify.sanitize(m.user),
+              sanitized: true
+            };
+            merged.push(sanitizedMessage);
+          }
         }
         return merged;
       });
@@ -200,7 +260,8 @@ export default function MugharredLandingPage() {
     setInput(""); // Clear immediately for better UX
     
     try {
-      ws.send(JSON.stringify({ type: "send_message", text: messageText }));
+      const sanitizedInput = DOMPurify.sanitize(messageText);
+      ws.send(JSON.stringify({ type: "send_message", text: sanitizedInput }));
       trackActivity();
     } catch (err) {
       setInput(messageText); // Restore on error
@@ -210,7 +271,14 @@ export default function MugharredLandingPage() {
     }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await SecureAPI.secureRequest('/api/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Clear local state regardless of API call result
     localStorage.removeItem("mugharred_session");
     localStorage.removeItem("mugharred_name");
     setSessionId(null);
@@ -219,6 +287,8 @@ export default function MugharredLandingPage() {
     setMessages([]);
     setOnlineUsers([]);
     setInput("");
+    SecureAPI.clearToken();
+    setToast({ message: "Du har loggats ut", type: 'success' });
   }
 
   // WebSocket connection with reconnection logic
@@ -241,28 +311,46 @@ export default function MugharredLandingPage() {
       };
       
       socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === "message") {
-          setMessages((prev) => [data.message, ...prev]);
-          setTotalMessages((prev) => prev + 1);
+        try {
+          const data = JSON.parse(event.data);
           
-          // Show notification for messages from others
-          if (data.message.user !== localStorage.getItem("mugharred_name")) {
-            setToast({ 
-              message: `${data.message.user}: ${data.message.text.substring(0, 50)}...`, 
-              type: 'info' 
+          if (data.type === "message") {
+            const sanitizedMessage = {
+              ...data.message,
+              text: DOMPurify.sanitize(data.message.text),
+              user: DOMPurify.sanitize(data.message.user),
+              sanitized: true
+            };
+            
+            setMessages((prev) => {
+              const exists = prev.find(m => m.id === sanitizedMessage.id);
+              if (exists) return prev;
+              return [sanitizedMessage, ...prev];
             });
+            setTotalMessages((prev) => prev + 1);
+            
+            // Show notification for messages from others
+            if (sanitizedMessage.user !== localStorage.getItem("mugharred_name")) {
+              setToast({ 
+                message: `${sanitizedMessage.user}: ${sanitizedMessage.text.substring(0, 50)}...`, 
+                type: 'info' 
+              });
+            }
+          } else if (data.type === "online_users") {
+            const sanitizedUsers = data.users.map((user: string) => DOMPurify.sanitize(user));
+            setOnlineUsers(sanitizedUsers);
+          } else if (data.type === "error") {
+            if (data.error.includes("inaktivitet")) {
+              setToast({ message: data.error, type: 'error' });
+              handleLogout();
+            } else {
+              setToast({ message: data.error, type: 'error' });
+            }
+          } else if (data.type === "pong") {
+            // Heartbeat response
           }
-        } else if (data.type === "online_users") {
-          setOnlineUsers(data.users);
-        } else if (data.type === "error") {
-          if (data.error.includes("inaktivitet")) {
-            setToast({ message: data.error, type: 'error' });
-            handleLogout();
-          } else {
-            setToast({ message: data.error, type: 'error' });
-          }
+        } catch (error) {
+          console.error("WebSocket message error:", error);
         }
       };
       
@@ -277,16 +365,16 @@ export default function MugharredLandingPage() {
       };
       
       setWs(socket);
+
+      // Setup heartbeat
+      activityInterval = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "heartbeat" }));
+        }
+      }, 30000);
     }
 
     connect();
-
-    // Send activity heartbeat
-    activityInterval = setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "heartbeat" }));
-      }
-    }, 30000); // Every 30 seconds
 
     return () => {
       clearTimeout(reconnectTimeout);

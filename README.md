@@ -18,13 +18,19 @@ Mugharred är en enkelsidig applikation som låter användare chatta i realtid. 
 - ✅ **Vacker design** - Glassmorphism med gradienter i grön/guld
 - ✅ **Clean state** - Ingen testdata, redo för riktiga användare
 
-### Säkerhet (Medvetet enkel)
+### Säkerhet (Enterprise-grad)
 
-- Max 5 användare online samtidigt
+- **Session Security**: Redis-baserad session store med HttpOnly cookies
+- **CSRF Protection**: Double submit cookie pattern för alla POST requests
+- **Input Sanitization**: DOMPurify för XSS-skydd på client och server
+- **Rate Limiting**: Express-rate-limit med IP-baserad begränsning
+- **Security Headers**: Helmet.js för säkra HTTP headers
+- **Request Validation**: Express-validator för all input validation
+- **Logging & Monitoring**: Winston för säkerhetsloggning
+- **Authentication**: Säker sessionshantering med auto-logout
+- Max 5 användare online samtidigt (kontrolled)
 - Rate limiting: 5 meddelanden per 10 sekunder
 - Meddelanden begränsade till 500 tecken
-- Auto-logout efter 5 minuters inaktivitet
-- Enkel session-hantering (in-memory)
 
 ## Projektstruktur
 
@@ -58,9 +64,17 @@ mugharred/
 
 ### Backend
 - **Node.js** - Runtime
-- **Express** - Web framework
+- **Express** - Web framework med säkerhetsförstärkningar
 - **WebSockets (ws)** - Realtidskommunikation
 - **TypeScript** - Typsäkerhet
+- **Redis** - Session store och caching
+- **Security Stack**:
+  - Helmet.js - Security headers
+  - CSRF-CSRF - Double submit CSRF protection
+  - Express-rate-limit - Rate limiting
+  - Express-validator - Input validation
+  - DOMPurify - XSS sanitization
+  - Winston - Security logging
 - **CORS** - Cross-origin support
 
 ### Infrastructure
@@ -105,10 +119,12 @@ Se [DEPLOYMENT.md](docs/DEPLOYMENT.md) för fullständig deploy guide.
 ## API Endpoints
 
 ### HTTP Endpoints
-- `POST /api/login` - Logga in med namn
-- `GET /api/messages?offset=0&limit=10` - Hämta meddelanden (paginerat)
-- `GET /api/online-users` - Lista online användare
-- `GET /health` - Hälsokontroll
+- `GET /api/csrf-token` - Hämta CSRF token för säkra requests
+- `POST /api/login` - Logga in med namn (kräver CSRF token)
+- `POST /api/logout` - Logga ut (kräver CSRF token)
+- `GET /api/messages?offset=0&limit=10` - Hämta meddelanden (paginerat, autentiserad)
+- `GET /api/online-users` - Lista online användare (autentiserad)
+- `GET /health` - Hälsokontroll (offentlig)
 
 ### WebSocket
 - `ws://host/ws?sessionId=xxx` - Realtidsanslutning
@@ -185,18 +201,26 @@ npm start            # Kör byggd version
 Mugharred MVP är **100% funktionell** och live på https://mugharred.se
 
 ### Vad som fungerar ✅
-- [x] Komplett social feed med realtidschat
-- [x] Landing page med vacker design
-- [x] Max 5 användare säkerhetsbegränsning
-- [x] Rate limiting (5 meddelanden/10 sek)
-- [x] Auto-logout efter 5 min inaktivitet
-- [x] Virtual scroll med native scrollbar
-- [x] Modal för fulltext meddelanden
-- [x] WebSocket realtidsuppdateringar
-- [x] PM2 production deployment
-- [x] SSL/HTTPS via Let's Encrypt
-- [x] Nginx reverse proxy
-- [x] Komplett dokumentation
+- [x] **Säkerhetsförstärkningar**:
+  - [x] Redis session store med säkra cookies
+  - [x] CSRF protection på alla endpoints
+  - [x] Input sanitization och XSS-skydd
+  - [x] Rate limiting med IP-baserad begränsning
+  - [x] Security headers med Helmet.js
+  - [x] Komplett säkerhetsloggning
+- [x] **Core Features**:
+  - [x] Komplett social feed med realtidschat
+  - [x] Landing page med vacker design
+  - [x] Max 5 användare säkerhetsbegränsning
+  - [x] Auto-logout efter 5 min inaktivitet
+  - [x] Virtual scroll med native scrollbar
+  - [x] Modal för fulltext meddelanden
+  - [x] WebSocket realtidsuppdateringar
+- [x] **Infrastructure**:
+  - [x] PM2 production deployment
+  - [x] SSL/HTTPS via Let's Encrypt
+  - [x] Nginx reverse proxy
+  - [x] Komplett dokumentation
 
 ## Nästa Steg (Post-MVP)
 
@@ -204,12 +228,12 @@ För att skala upp från MVP till produktionssystem:
 
 1. **Databas**: PostgreSQL för persistent storage
 2. **Autentisering**: E-post verifiering och riktiga användarkonton
-3. **Sessions**: Redis-baserad session store  
-4. **Skalning**: Öka användargräns från 5 till 50-100
-5. **Moderering**: Automatisk innehållsfiltrering och admin tools
-6. **Analytics**: Användningsstatistik och monitoring
-7. **Mobile app**: React Native companion app
-8. **Backup**: Automatisk databas backup
+3. **Skalning**: Öka användargräns från 5 till 50-100
+4. **Moderering**: Automatisk innehållsfiltrering och admin tools
+5. **Analytics**: Användningsstatistik och monitoring
+6. **Mobile app**: React Native companion app
+7. **Backup**: Automatisk databas backup
+8. **Advanced Security**: JWT tokens, bcrypt hashing, certificate pinning
 
 ## Live System
 
