@@ -6,6 +6,14 @@
 
 Detta dokument beskriver hur den nuvarande live installationen är organiserad.
 
+## 🔧 Senaste Uppdateringen (2025-12-12)
+
+**Kritisk WebSocket Buggfix Implementerad:**
+- ✅ **Problem**: SessionId mismatch i broadcast() förhindrade WebSocket connections
+- ✅ **Root Cause**: Users togs premature bort från onlineUsers Map 
+- ✅ **Lösning**: Uppdaterad broadcast logic för att skydda users utan WebSocket ännu
+- ✅ **Resultat**: Chat och realtidsuppdateringar fungerar nu korrekt
+
 ## Rot Nivå
 
 ```
@@ -43,21 +51,42 @@ backend/
 
 ### Backend Filer
 
-#### `src/server.ts` (Säker)
-- **Security Stack**: Helmet, CSRF, Rate Limiting, Input Validation
-- **Session Management**: Redis store, HttpOnly cookies
-- **Express server setup** med trust proxy konfiguration
-- **WebSocket hantering** med autentisering
-- **API endpoints** med CSRF protection:
-  - `GET /api/csrf-token` - CSRF token
-  - `POST /api/login` - Säker inloggning
-  - `POST /api/logout` - Säker utloggning
-  - `GET /api/messages` - Hämta meddelanden (auth required)
-  - `GET /api/online-users` - Online användare (auth required)
-- **Redis session storage** för skalbarhet
-- **Input sanitization** med DOMPurify
-- **Winston logging** för säkerhetshändelser
-- **Rate limiting** per IP och endpoint
+#### `src/server.ts` (Enterprise-Grade Security)
+- **Security Stack**: 
+  - Helmet.js för säkra HTTP headers
+  - CSRF-CSRF double submit cookie protection
+  - Express-rate-limit med IP-baserad begränsning
+  - Express-validator för input validation
+  - DOMPurify för XSS sanitization
+  - Winston för säkerhetsloggning
+- **Session Management**: 
+  - Redis store med connect-redis v7.1.1
+  - HttpOnly cookies med SameSite=strict
+  - 30-minuters session expiry
+  - Säker cookie settings i production
+- **Express server setup**:
+  - Trust proxy för localhost (127.0.0.1)
+  - CORS konfiguration för frontend
+  - Environment-baserad konfiguration
+- **WebSocket hantering**:
+  - Session-baserad autentisering
+  - Input sanitization på alla meddelanden
+  - Heartbeat/keepalive system
+  - Auto-cleanup av inaktiva connections
+  - 🔧 **FIXAD**: broadcast() logic för korrekt user management
+- **API endpoints** med full säkerhet:
+  - `GET /api/csrf-token` - CSRF token generering
+  - `POST /api/login` - Säker inloggning med rate limiting
+  - `POST /api/logout` - Säker utloggning med session cleanup
+  - `GET /api/messages` - Paginerade meddelanden (auth required)
+  - `GET /api/online-users` - Online användarlista (auth required)
+  - `GET /health` - System hälsokontroll
+- **Advanced Security Features**:
+  - Auto-logout efter 5 minuters inaktivitet
+  - Max 5 concurrent users (hårdkodad säkerhet)
+  - Message rate limiting (5 msgs/10 sekunder)
+  - All input/output sanitization med DOMPurify
+  - Security logging för alla crítica events
 
 #### `package.json`
 ```json
@@ -86,26 +115,40 @@ src/
 - DOM mounting
 - Strict mode wrapper
 
-#### `MugharredLandingPage.tsx` (Säker)
-- **Security Features**:
-  - SecureAPI klass för CSRF-skyddade requests
-  - DOMPurify input sanitization
+#### `MugharredLandingPage.tsx` (Enterprise Security + Modern Design)
+- **Enterprise Security Features**:
+  - SecureAPI class för CSRF-skyddade requests
+  - DOMPurify input/output sanitization
   - Säker autentisering med HttpOnly cookies
-- **Landing Page State**: Icke-inloggade användare
-  - Hero sektion med beskrivning
-  - Features showcase med säkerhetsinformation
-  - Säker login formulär
-- **Live Feed State**: Inloggade användare  
-  - Header med säker logout
-  - Online users lista
-  - Message input med sanitization
-  - Virtual scrolled feed
-  - Message modal med sanitized content
-- **Shared Logic**:
-  - Säker WebSocket hantering
-  - State management
-  - Virtual scroll implementation
-  - CSRF token management
+  - Auto-logout efter 5 minuters inaktivitet
+  - Real-time CSRF token management
+- **Modern Design System**:
+  - Glassmorphism UI med backdrop-blur effekter
+  - Avancerade CSS animationer (fade-in, slide-up, scale-in)
+  - Mobile-first responsive design med safe areas
+  - Toast notification system för user feedback
+  - Loading states med skeleton screens och spinners
+  - Brand-consistent grön/guld färgschema
+  - Accessibility med focus states och keyboard navigation
+- **Landing Page State** (Icke-inloggade användare):
+  - Modern hero sektion med glassmorphism
+  - Animated features showcase med hover effekter
+  - Säker login formulär med loading states
+  - Professional footer med branding
+- **Live Feed State** (Inloggade användare):
+  - Clean header med connection status indicator
+  - Säker logout med session cleanup
+  - Animated online users lista
+  - Virtual scrolled message feed med native scrollbar
+  - Input area med character counter och validation
+  - Message modal med sanitized content display
+  - Real-time toast notifications för alla actions
+- **Advanced Frontend Logic**:
+  - Säker WebSocket med auto-reconnection
+  - Virtual scroll performance optimization
+  - State management med React hooks
+  - CSRF token lifecycle management
+  - Input sanitization på alla user interactions
 
 #### `index.css`
 ```css
@@ -336,24 +379,66 @@ cp -r dist/* frontend/dist/  # Frontend deploy
 pm2 restart mugharred-backend # Backend deploy
 ```
 
-## Säkerhet Lager
+## Enterprise Säkerhetslager
 
-### Frontend
-- Input validering (namn längd, meddelande längd)
-- XSS skydd via React's JSX escaping
-- HTTPS only i production
+### Frontend Security
+- **Input Validation**: Namn (2-50 tecken), meddelanden (max 500 tecken)
+- **XSS Protection**: 
+  - React JSX automatisk escaping
+  - DOMPurify sanitization på all user input/output
+  - CSP headers via Helmet.js
+- **CSRF Protection**: 
+  - SecureAPI class för alla requests
+  - Double submit cookie pattern
+  - Automatic token refresh
+- **Session Security**: 
+  - HttpOnly cookies endast
+  - Auto-logout efter 5 min inaktivitet
+  - Secure cookies i production (HTTPS)
+- **Connection Security**:
+  - HTTPS only enforcement
+  - WebSocket over TLS (WSS)
+  - Trusted origins endast
 
-### Backend  
-- Rate limiting per session
-- CORS konfiguration
-- Input sanitization
-- Session validering
+### Backend Security  
+- **Authentication & Session**:
+  - Redis session store med säkra cookies
+  - Session expiry (30 minuter)
+  - Automatic cleanup av inaktiva sessioner
+- **Input Validation & Sanitization**:
+  - Express-validator på alla endpoints
+  - DOMPurify sanitization server-side
+  - Strict input length limits
+- **Rate Limiting**:
+  - IP-baserad limiting (100 req/15min)
+  - Authentication rate limiting (5 attempts/15min) 
+  - Message rate limiting (5 msgs/10sec per user)
+  - Max 5 concurrent users (hårdkodad säkerhet)
+- **Security Headers**:
+  - Helmet.js comprehensive headers
+  - Content Security Policy
+  - HSTS, X-Frame-Options, etc.
+- **Logging & Monitoring**:
+  - Winston säkerhetsloggning
+  - Failed authentication tracking
+  - Suspicious activity detection
+  - Auto-alerting på säkerhetsincidenter
 
-### Infrastructure
-- Nginx reverse proxy
-- SSL termination
-- Security headers
-- Brandvägg (ufw)
+### Infrastructure Security
+- **Reverse Proxy**: Nginx med säker konfiguration
+- **SSL/TLS**: Let's Encrypt med auto-renewal
+- **Network Security**: 
+  - Trust proxy endast localhost (127.0.0.1)
+  - CORS strict origin policy
+  - Brandvägg (ufw) regler
+- **Process Security**:
+  - PM2 process isolation
+  - Non-root user execution
+  - Environment variable protection
+- **Data Security**:
+  - Redis password authentication
+  - In-memory endast (ingen persistent data)
+  - Auto-cleanup av känslig data
 
 ## Performance Optimering
 

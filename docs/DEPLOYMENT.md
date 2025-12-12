@@ -10,12 +10,13 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 
 ### Server Krav
 - Ubuntu 20.04+ eller liknande Linux distribution
-- Node.js 18+
-- Redis server (för sessions)
-- Nginx
-- SSL certifikat (Let's Encrypt)
-- Minst 1GB RAM
-- 10GB diskutrymme
+- Node.js 18+ (latest LTS recommended)
+- Redis server (för säkra sessioner - REQUIRED för säkerhet)
+- Nginx (reverse proxy + säkra headers)
+- SSL certifikat (Let's Encrypt auto-renewal)
+- Minst 1GB RAM (rekommenderat 2GB för säkerhet)
+- 10GB diskutrymme (inkl. säkerhetsloggar)
+- Firewall (ufw) för nätverkssäkerhet
 
 ### Nuvarande Setup (Live Production)
 - **Server**: Ubuntu 20.04 LTS med Nginx reverse proxy
@@ -27,6 +28,7 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 - **Security**: Enterprise-grade säkerhetsimplementering
 - **Process Manager**: PM2 med auto-restart
 - **Status**: ✅ Stabil och live sedan December 12, 2025
+- **Latest**: ✅ WebSocket sessionId mismatch buggfix deployed (2025-12-12)
 
 ## Deployment Process
 
@@ -359,10 +361,21 @@ cd backend && npm audit && npm audit fix
    sudo journalctl -u mugharred -n 50
    ```
 
-2. **WebSocket anslutningar misslyckas**
+2. **WebSocket anslutningar misslyckas** ⚠️ SENAST FIXAD 2025-12-12
    ```bash
+   # KRITISK FIX IMPLEMENTERAD:
+   # Problem: Users togs premature bort från onlineUsers Map av broadcast()
+   # Lösning: Uppdaterad broadcast logic för korrekt hantering
+   
+   # DEBUG STEPS:
    # Kontrollera att backend lyssnar på rätt port
    sudo netstat -tlpn | grep :3001
+   
+   # Kontrollera att users finns kvar i onlineUsers efter login
+   pm2 logs mugharred-backend | grep "Setting user in onlineUsers"
+   
+   # Verifiera WebSocket connections
+   pm2 logs mugharred-backend | grep "WebSocket connected"
    
    # Kontrollera nginx WebSocket config
    sudo nginx -t

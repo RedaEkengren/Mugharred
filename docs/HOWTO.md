@@ -6,6 +6,15 @@ Praktisk guide för vanliga uppgifter i Mugharred projektet.
 
 Detta är din guide för att arbeta med den live Mugharred installationen.
 
+## 🔧 Senaste Uppdateringen (2025-12-12)
+
+**Kritisk WebSocket Buggfix Implementerad:**
+- ✅ **Problem löst**: SessionId mismatch som förhindrade chat-funktionalitet
+- ✅ **Root cause**: broadcast() funktionen tog premature bort users före WebSocket connection
+- ✅ **Solution**: Uppdaterad logic för att endast ta bort explicit stängda connections
+- ✅ **Testing**: Login och real-time chat fungerar nu korrekt
+- ⚠️ **Note**: CSRF och rate limiting temporärt i debug-mode under testing
+
 ## Utveckling
 
 ### Starta Utvecklingsmiljö
@@ -382,13 +391,29 @@ Mugharred använder nu enterprise-grad säkerhet:
    # Eller ändra port i .env
    ```
 
-2. **"WebSocket anslutning misslyckades"**
+2. **"WebSocket anslutning misslyckades"** ⚠️ NYLIGEN FIXAD
    ```bash
-   # Kontrollera backend körs
+   # VANLIGA ORSAKER OCH LÖSNINGAR:
+   
+   # A) SessionId mismatch (FIXAD 2025-12-12)
+   # Problem: Användare blir borttagna från onlineUsers innan WebSocket ansluter
+   # Lösning: Uppdaterad broadcast() funktion att inte ta bort users utan WebSocket
+   
+   # B) Kontrollera backend körs
    curl http://localhost:3001/health
    
-   # Kontrollera nginx WebSocket config
+   # C) Debug WebSocket connections
+   # Sök efter dessa loggar i backend:
+   pm2 logs mugharred-backend | grep "WebSocket"
+   # Du ska se "✅ WebSocket connected" när det fungerar
+   
+   # D) Kontrollera nginx WebSocket config
    sudo nginx -t
+   
+   # E) Debug sessionId issues
+   # Kontrollera att användaren finns i onlineUsers när WebSocket försöker ansluta
+   curl -X POST http://localhost:3001/api/login -H "Content-Type: application/json" -d '{"name":"TestUser"}'
+   # Ska returnera sessionId som används för WebSocket
    ```
 
 3. **"Permission denied" när du deployar**
