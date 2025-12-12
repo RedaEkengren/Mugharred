@@ -2,6 +2,10 @@
 
 Praktisk guide för vanliga uppgifter i Mugharred projektet.
 
+**Live System: https://mugharred.se** | **Status: ✅ Production Ready**
+
+Detta är din guide för att arbeta med den live Mugharred installationen.
+
 ## Utveckling
 
 ### Starta Utvecklingsmiljö
@@ -148,10 +152,12 @@ npx playwright test
 
 #### Visa Live Loggar
 ```bash
-# Backend loggar
+# Backend loggar (PM2 - AKTUELL SETUP)
 pm2 logs mugharred-backend --lines 50
-# eller
-sudo journalctl -u mugharred -f
+
+# PM2 status och stats
+pm2 status
+pm2 monit
 
 # Nginx loggar
 sudo tail -f /var/log/nginx/mugharred.access.log

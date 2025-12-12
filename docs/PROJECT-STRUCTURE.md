@@ -2,6 +2,10 @@
 
 Översikt över projektets filstruktur och organisation.
 
+**Live Production System på https://mugharred.se**
+
+Detta dokument beskriver hur den nuvarande live installationen är organiserad.
+
 ## Rot Nivå
 
 ```
@@ -279,12 +283,16 @@ const [scrollTop, setScrollTop] = useState(0)
 
 ### Backend State
 ```typescript
-// In-memory storage
+// In-memory storage (production ready för MVP)
 const messages: Message[] = []
 const onlineUsers = new Map<string, OnlineUser>()
 
-// Rate limiting
+// Rate limiting och auto-logout
 const messageTimestamps = new Map<string, number[]>()
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minuter
+
+// Auto-cleanup process
+setInterval(cleanupInactiveUsers, 60_000) // Körs varje minut
 ```
 
 ## Build Process

@@ -2,6 +2,10 @@
 
 Guide för att deploiera Mugharred till produktion.
 
+**Status: ✅ REDAN DEPLOYAD på https://mugharred.se**
+
+Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du kan uppdatera eller replikera den.
+
 ## Produktionsmiljö
 
 ### Server Krav
@@ -12,12 +16,14 @@ Guide för att deploiera Mugharred till produktion.
 - Minst 1GB RAM
 - 10GB diskutrymme
 
-### Nuvarande Setup
-- **Server**: Ubuntu med Nginx reverse proxy
-- **Domain**: mugharred.se
-- **SSL**: Let's Encrypt automatiska certifikat
-- **Frontend**: Statiska filer serverade av Nginx
-- **Backend**: Node.js process på port 3001
+### Nuvarande Setup (Live Production)
+- **Server**: Ubuntu 20.04 LTS med Nginx reverse proxy
+- **Domain**: mugharred.se (SSL aktiv)
+- **SSL**: Let's Encrypt automatiska certifikat (förnyade automatiskt)
+- **Frontend**: Statiska React build serverade av Nginx
+- **Backend**: Node.js TypeScript process på port 3001
+- **Process Manager**: PM2 med auto-restart
+- **Status**: ✅ Stabil och live sedan December 12, 2025
 
 ## Deployment Process
 

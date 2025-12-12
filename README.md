@@ -12,9 +12,11 @@ Mugharred är en enkelsidig applikation som låter användare chatta i realtid. 
 - ✅ **Live feed** - Meddelanden uppdateras i realtid via WebSockets
 - ✅ **Virtual scroll** - Renderar endast 10 meddelanden i taget med native scrollbar
 - ✅ **Modal för fulltext** - Klicka på meddelanden för att se hela texten
-- ✅ **Online-lista** - Se vilka som är online just nu
-- ✅ **Rate limiting** - Begränsar spam och attacker
+- ✅ **Online-lista** - Se vilka som är online just nu (max 5 samtidigt)
+- ✅ **Rate limiting** - Begränsar spam och attacker (5 meddelanden/10 sek)
+- ✅ **Auto-logout** - Automatisk utloggning efter 5 minuters inaktivitet
 - ✅ **Vacker design** - Glassmorphism med gradienter i grön/guld
+- ✅ **Clean state** - Ingen testdata, redo för riktiga användare
 
 ### Säkerhet (Medvetet enkel)
 
@@ -178,20 +180,60 @@ npm start            # Kör byggd version
 - **Rate limiting**: Per session baserat
 - **WebSocket hantering**: Broadcast till alla klienter
 
-## Nästa Steg
+## Aktuell Status (December 2025)
 
-För att förbättra säkerheten i framtiden:
+Mugharred MVP är **100% funktionell** och live på https://mugharred.se
 
-1. **Databas**: Flytta från in-memory till persistent storage
-2. **Autentisering**: Lägg till e-post verifiering
-3. **Sessions**: Redis-baserad session hantering  
-4. **Rate Limiting**: Mer sofistikerad begränsning
-5. **Moderering**: Automatisk innehållsfiltrering
-6. **Backup**: Regelbunden säkerhetskopiering
+### Vad som fungerar ✅
+- [x] Komplett social feed med realtidschat
+- [x] Landing page med vacker design
+- [x] Max 5 användare säkerhetsbegränsning
+- [x] Rate limiting (5 meddelanden/10 sek)
+- [x] Auto-logout efter 5 min inaktivitet
+- [x] Virtual scroll med native scrollbar
+- [x] Modal för fulltext meddelanden
+- [x] WebSocket realtidsuppdateringar
+- [x] PM2 production deployment
+- [x] SSL/HTTPS via Let's Encrypt
+- [x] Nginx reverse proxy
+- [x] Komplett dokumentation
+
+## Nästa Steg (Post-MVP)
+
+För att skala upp från MVP till produktionssystem:
+
+1. **Databas**: PostgreSQL för persistent storage
+2. **Autentisering**: E-post verifiering och riktiga användarkonton
+3. **Sessions**: Redis-baserad session store  
+4. **Skalning**: Öka användargräns från 5 till 50-100
+5. **Moderering**: Automatisk innehållsfiltrering och admin tools
+6. **Analytics**: Användningsstatistik och monitoring
+7. **Mobile app**: React Native companion app
+8. **Backup**: Automatisk databas backup
+
+## Live System
+
+🌍 **https://mugharred.se** - Testa det nu!
+
+Se [LIVE-STATUS.md](docs/LIVE-STATUS.md) för aktuell systemstatus och prestandametrics.
+
+## Dokumentation
+
+| Fil | Beskrivning |
+|-----|-------------|
+| [README.md](README.md) | Projektöversikt och snabbstart |
+| [LIVE-STATUS.md](docs/LIVE-STATUS.md) | Live systemstatus och metrics |
+| [MVP.md](docs/MVP.md) | MVP specifikation och genomförande |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment guide |
+| [HOWTO.md](docs/HOWTO.md) | Utvecklar guide och underhåll |
+| [PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md) | Kodstruktur och arkitektur |
 
 ## Support
 
-För frågor eller problem, skapa en issue i projektet.
+För frågor eller problem:
+1. Konsultera [LIVE-STATUS.md](docs/LIVE-STATUS.md) för systemstatus
+2. Läs [HOWTO.md](docs/HOWTO.md) för felsökning
+3. Skapa en issue för buggar eller feature requests
 
 ## Licens
 
