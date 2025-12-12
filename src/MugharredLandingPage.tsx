@@ -121,6 +121,12 @@ export default function MugharredLandingPage() {
         setOnlineUsers(data.users);
       } else if (data.type === "error") {
         alert(data.error);
+        // If error is about inactivity, logout user
+        if (data.error.includes("inaktivitet")) {
+          localStorage.removeItem("mugharred_session");
+          localStorage.removeItem("mugharred_name");
+          setSessionId(null);
+        }
       }
     };
     

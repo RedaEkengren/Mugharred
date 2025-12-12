@@ -165,6 +165,9 @@ wss.on("connection", (socket, req) => {
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === "send_message") {
+        // Update user activity timestamp
+        user.lastActivity = Date.now();
+        
         if (!canSendMessage(sessionId)) {
           socket.send(
             JSON.stringify({

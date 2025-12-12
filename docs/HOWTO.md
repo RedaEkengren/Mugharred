@@ -245,6 +245,12 @@ pm2 start mugharred-backend
    const WINDOW_MS = 5_000;       // Ändra från 10 sekunder till 5
    ```
 
+3. **Ändra inaktivitets timeout:**
+   ```typescript
+   // I backend/src/server.ts
+   const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // Ändra från 5 till 10 minuter
+   ```
+
 3. **Meddelande längd:**
    ```typescript
    // I backend/src/server.ts

@@ -1,10 +1,10 @@
 # Mugharred
 
-En enkel social feed som uppdateras live - minimalistisk Twitter-klon med WebSocket-support.
+En enkel social feed som uppdateras live - minimalistisk Twitter-klon med WebSocket-support och automatisk inaktivitetshantering.
 
 ## Översikt
 
-Mugharred är en enkelsidig applikation som låter användare chatta i realtid. Applikationen använder en minimalistisk inloggning (endast namn) och är begränsad till max 5 användare samtidigt.
+Mugharred är en enkelsidig applikation som låter användare chatta i realtid. Applikationen använder en minimalistisk inloggning (endast namn), är begränsad till max 5 användare samtidigt, och loggar automatiskt ut inaktiva användare efter 5 minuter.
 
 ### Funktioner
 
@@ -21,6 +21,7 @@ Mugharred är en enkelsidig applikation som låter användare chatta i realtid. 
 - Max 5 användare online samtidigt
 - Rate limiting: 5 meddelanden per 10 sekunder
 - Meddelanden begränsade till 500 tecken
+- Auto-logout efter 5 minuters inaktivitet
 - Enkel session-hantering (in-memory)
 
 ## Projektstruktur

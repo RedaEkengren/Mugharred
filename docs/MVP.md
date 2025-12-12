@@ -96,7 +96,8 @@ function broadcast(payload: any) {
 2. **In-memory storage**: Inga persistenta data = mindre risk
 3. **Rate limiting**: Förhindrar spam och enkla attacker
 4. **Kort meddelanden**: 500 tecken max
-5. **Ingen e-post**: Undviker persondata hantering
+5. **Auto-logout**: Automatisk utloggning efter 5 minuters inaktivitet
+6. **Ingen e-post**: Undviker persondata hantering
 
 ### Vad som INTE finns (medvetet)
 - ❌ Lösenord eller autentisering
