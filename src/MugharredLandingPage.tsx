@@ -1,13 +1,41 @@
-import React, { useMemo, useState } from "react";
-import { ArrowRight, Shield, Zap, Users, MessageSquareText, Globe2 } from "lucide-react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { ArrowRight, Shield, Zap, Users, MessageSquareText, Globe2, Send, X } from "lucide-react";
+
+type Message = {
+  id: string;
+  user: string;
+  text: string;
+  timestamp: number;
+};
+
+const ROW_HEIGHT = 80;
+const PAGE_SIZE = 10;
 
 export default function MugharredLandingPage() {
-  const [name, setName] = useState("");
+  // Login state
+  const [sessionId, setSessionId] = useState<string | null>(
+    () => localStorage.getItem("mugharred_session") || null,
+  );
+  const [name, setName] = useState(
+    () => localStorage.getItem("mugharred_name") || ""
+  );
   const [error, setError] = useState<string | null>(null);
+
+  // Feed state
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [totalMessages, setTotalMessages] = useState(0);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [input, setInput] = useState("");
+  const [expandedMessage, setExpandedMessage] = useState<Message | null>(null);
+  
+  // Virtual scroll state
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
 
   const canJoin = useMemo(() => name.trim().length >= 2, [name]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (trimmed.length < 2) {
@@ -16,14 +44,266 @@ export default function MugharredLandingPage() {
     }
     setError(null);
 
-    // This is a landing page stub. Wire to your real login endpoint later.
-    // Example:
-    // fetch("/api/login", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ name: trimmed })})
-    //   .then(...)
-
-    alert(`Välkommen, ${trimmed}! Koppla detta till /api/login när backend är klar.`);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || "Inloggning misslyckades");
+        return;
+      }
+      const data = await res.json();
+      setSessionId(data.sessionId);
+      localStorage.setItem("mugharred_session", data.sessionId);
+      localStorage.setItem("mugharred_name", data.name);
+    } catch (err) {
+      setError("Kunde inte ansluta till servern");
+    }
   }
 
+  async function loadPage(offset: number) {
+    try {
+      const res = await fetch(
+        `/api/messages?offset=${offset}&limit=${PAGE_SIZE}`,
+      );
+      const data = await res.json();
+      setTotalMessages(data.total);
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const merged = [...prev];
+        for (const m of data.items) {
+          if (!existingIds.has(m.id)) merged.push(m);
+        }
+        return merged;
+      });
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+    }
+  }
+
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    setScrollTop(el.scrollTop);
+
+    if (
+      el.scrollTop + el.clientHeight >= el.scrollHeight - ROW_HEIGHT * 2 &&
+      messages.length < totalMessages
+    ) {
+      loadPage(messages.length);
+    }
+  }
+
+  function sendMessage() {
+    if (!ws || !input.trim()) return;
+    ws.send(JSON.stringify({ type: "send_message", text: input.trim() }));
+    setInput("");
+  }
+
+  // WebSocket connection
+  useEffect(() => {
+    if (!sessionId) return;
+
+    loadPage(0);
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${encodeURIComponent(sessionId)}`;
+    const socket = new WebSocket(wsUrl);
+    
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "message") {
+        setMessages((prev) => [data.message, ...prev]);
+        setTotalMessages((prev) => prev + 1);
+      } else if (data.type === "online_users") {
+        setOnlineUsers(data.users);
+      } else if (data.type === "error") {
+        alert(data.error);
+      }
+    };
+    
+    socket.onclose = () => {
+      console.log("WS closed");
+    };
+    
+    setWs(socket);
+
+    return () => {
+      socket.close();
+    };
+  }, [sessionId]);
+
+  // If logged in, show feed interface
+  if (sessionId) {
+    const totalHeight = totalMessages * ROW_HEIGHT;
+    const visibleStartIndex = Math.floor(scrollTop / ROW_HEIGHT);
+    const visibleCount = 10;
+    const visibleEndIndex = Math.min(
+      visibleStartIndex + visibleCount,
+      totalMessages,
+    );
+    const visibleMessages = messages.slice(
+      visibleStartIndex,
+      visibleEndIndex,
+    );
+    const topSpacerHeight = visibleStartIndex * ROW_HEIGHT;
+
+    return (
+      <div className="min-h-screen bg-[radial-gradient(1200px_circle_at_20%_10%,rgba(0,108,58,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_30%,rgba(212,175,55,0.18),transparent_55%),linear-gradient(to_bottom,rgba(255,255,255,0.8),rgba(255,255,255,0.55))] text-neutral-900">
+        {/* Header */}
+        <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#006C3A] text-white shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
+              <span className="text-lg font-semibold">M</span>
+            </div>
+            <div className="leading-tight">
+              <div className="text-base font-semibold tracking-tight">Mugharred</div>
+              <div className="text-xs text-neutral-600">Välkommen, {name}!</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-neutral-700">
+              <span className="inline-flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                {onlineUsers.length} online
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem("mugharred_session");
+                localStorage.removeItem("mugharred_name");
+                setSessionId(null);
+                ws?.close();
+              }}
+              className="text-sm text-neutral-600 hover:text-neutral-900"
+            >
+              Logga ut
+            </button>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-4xl px-4 pb-10">
+          {/* Online users */}
+          <div className="mb-6 rounded-[1.75rem] border border-black/10 bg-white/70 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.08)] backdrop-blur">
+            <div className="text-sm font-semibold mb-2">Online nu ({onlineUsers.length}/5)</div>
+            <div className="flex flex-wrap gap-2">
+              {onlineUsers.map((user) => (
+                <span
+                  key={user}
+                  className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-1 text-sm"
+                >
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  {user}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Message input */}
+          <div className="mb-6 rounded-[1.75rem] border border-black/10 bg-white/70 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.08)] backdrop-blur">
+            <div className="flex gap-3">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Skriv ett meddelande..."
+                className="flex-1 resize-none rounded-xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#006C3A] focus:ring-2 focus:ring-[#006C3A]/30"
+                rows={2}
+                maxLength={500}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || !ws}
+                className="inline-flex items-center justify-center rounded-xl bg-[#006C3A] px-4 py-2 text-white shadow-[0_12px_35px_rgba(0,0,0,0.12)] hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-emerald-900/50"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Virtual scrolled feed */}
+          <div className="rounded-[1.75rem] border border-black/10 bg-white/70 shadow-[0_20px_60px_rgba(0,0,0,0.08)] backdrop-blur overflow-hidden">
+            <div className="p-4 border-b border-black/5">
+              <div className="text-sm font-semibold">Live feed</div>
+              <div className="text-xs text-neutral-600">Native scroll • {totalMessages} meddelanden</div>
+            </div>
+            
+            <div
+              ref={containerRef}
+              style={{ height: 600, overflowY: "auto" }}
+              onScroll={handleScroll}
+              className="px-4"
+            >
+              <div style={{ height: totalHeight, position: "relative" }}>
+                <div style={{ transform: `translateY(${topSpacerHeight}px)` }}>
+                  {visibleMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      style={{
+                        height: ROW_HEIGHT,
+                        overflow: "hidden",
+                        padding: "12px 0",
+                        borderBottom: "1px solid rgba(0,0,0,0.05)",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setExpandedMessage(message)}
+                      className="hover:bg-black/5 transition-colors rounded-lg px-2"
+                    >
+                      <div className="flex items-center justify-between text-xs text-neutral-600 mb-1">
+                        <span className="font-medium text-neutral-900">{message.user}</span>
+                        <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                      <div className="text-sm text-neutral-800">
+                        <span className="block truncate">{message.text}</span>
+                        <span className="mt-1 inline-flex items-center gap-1 text-xs text-[#006C3A]">
+                          Läs mer <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Message modal */}
+        {expandedMessage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="max-w-2xl w-full rounded-[1.75rem] border border-black/10 bg-white p-6 shadow-[0_20px_60px_rgba(0,0,0,0.20)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="font-semibold text-lg">{expandedMessage.user}</div>
+                  <div className="text-sm text-neutral-600">
+                    {new Date(expandedMessage.timestamp).toLocaleString()}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setExpandedMessage(null)}
+                  className="inline-flex items-center justify-center rounded-xl border border-black/10 bg-white/70 p-2 text-neutral-600 hover:text-neutral-900 hover:bg-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">
+                {expandedMessage.text}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Landing page for non-logged in users
   return (
     <div className="min-h-screen bg-[radial-gradient(1200px_circle_at_20%_10%,rgba(0,108,58,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_30%,rgba(212,175,55,0.18),transparent_55%),linear-gradient(to_bottom,rgba(255,255,255,0.8),rgba(255,255,255,0.55))] text-neutral-900">
       {/* Top bar */}
@@ -104,9 +384,9 @@ export default function MugharredLandingPage() {
 
               <div className="space-y-3">
                 {[
-                  { user: "Noura", time: "1m", text: "Kul att se att allt uppdateras direkt. Minimalistiskt och snabbt." },
-                  { user: "Fahad", time: "3m", text: "En sida, en feed. Inga distraktioner. Perfekt för snabba uppdateringar." },
-                  { user: "Sara", time: "7m", text: "Gillar att texten öppnas i en modal istället för att ändra höjden." },
+                  { user: "Alex", time: "2m", text: "Första intrycket är att det ser väldigt rent och snyggt ut!" },
+                  { user: "Robin", time: "5m", text: "Gillar hur enkelt det är att komma igång - bara skriv namn och kör." },
+                  { user: "Sam", time: "8m", text: "Smart med virtualiserad scroll, märks inte ens att det bara laddar 10 åt gången." },
                 ].map((p, idx) => (
                   <div key={idx} className="rounded-2xl border border-black/5 bg-white p-4 shadow-[0_10px_25px_rgba(0,0,0,0.06)]">
                     <div className="mb-1 flex items-center justify-between text-xs text-neutral-600">
