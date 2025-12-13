@@ -1,11 +1,12 @@
 {
-  "name": "mugharred",
+  "name": "mugharred-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "frontend:build": "cd frontend && npm install && npm run build",
-    "deploy": "./deploy-frontend.sh"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@types/dompurify": "^3.0.5",

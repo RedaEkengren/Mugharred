@@ -120,7 +120,7 @@ app.use(session({
   store: new (RedisStore as any)({ client: redisClient }),
   secret: SESSION_SECRET,
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Force session creation for CSRF
   name: "mugharred.sid",
   cookie: {
     secure: NODE_ENV === "production", // HTTPS only in production
@@ -138,14 +138,8 @@ const {
 } = doubleCsrf({
   getSecret: () => SESSION_SECRET,
   getSessionIdentifier: (req) => {
-    // Ensure session exists and has an ID
-    if (!req.session) {
-      req.session = {} as any;
-    }
-    if (!req.session.id) {
-      req.session.id = randomUUID();
-    }
-    return req.session.id;
+    // Use the established Express session ID
+    return req.sessionID || 'no-session';
   },
   cookieName: "x-csrf-token",
   cookieOptions: {
@@ -390,8 +384,7 @@ app.post(
     });
     next();
   },
-  // Temporarily bypass CSRF for login to test functionality
-  // doubleCsrfProtection,
+  doubleCsrfProtection,
   (req: AuthenticatedRequest, res: express.Response) => {
     try {
       const { name } = req.body;
