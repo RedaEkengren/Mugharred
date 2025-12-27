@@ -1,36 +1,36 @@
 # Mugharred - How To Guide
 
-Praktisk guide för vanliga uppgifter i Mugharred projektet.
+Practical guide for common tasks in the Mugharred project.
 
 **Live System: https://mugharred.se** | **Status: ✅ Production Ready**
 
-Detta är din guide för att arbeta med den live Mugharred installationen.
+This is your guide for working with the live Mugharred installation.
 
-## 🔧 Senaste Uppdateringen (2025-12-12)
+## 🌍 Latest Update (2025-12-27)
 
-**Kritisk WebSocket Buggfix Implementerad:**
-- ✅ **Problem löst**: SessionId mismatch som förhindrade chat-funktionalitet
-- ✅ **Root cause**: broadcast() funktionen tog premature bort users före WebSocket connection
-- ✅ **Solution**: Uppdaterad logic för att endast ta bort explicit stängda connections
-- ✅ **Testing**: Login och real-time chat fungerar nu korrekt
-- ⚠️ **Note**: CSRF och rate limiting temporärt i debug-mode under testing
+**Global English Interface & Legal Page Modals Implemented:**
+- ✅ **Feature**: Complete English translation for worldwide usage
+- ✅ **Legal Pages**: Privacy, Terms, About now work as React modals instead of broken HTML files
+- ✅ **Footer**: Professional footer with working benbo.se legal connections
+- ✅ **Compliance**: Fixed Golden Rules violations by removing unauthorized HTML files
+- ✅ **Testing**: All modal functionality verified and working correctly
 
 ## Utveckling
 
 ### Starta Utvecklingsmiljö
 
-1. **Första gången:**
+1. **First time:**
    ```bash
-   # Klona och installera
+   # Clone and install
    git clone <repository>
    cd mugharred
    npm install
    cd backend && npm install && cd ..
    ```
 
-2. **Daglig användning:**
+2. **Daily usage:**
    ```bash
-   # Starta Redis för sessionslagring
+   # Start Redis for session storage
    sudo systemctl start redis-server
    
    # Terminal 1 - Frontend dev server
@@ -41,7 +41,7 @@ Detta är din guide för att arbeta med den live Mugharred installationen.
    npm run dev
    ```
 
-3. **Öppna i webbläsare:**
+3. **Open in browser:**
    ```
    http://localhost:5173
    ```
@@ -64,7 +64,17 @@ Detta är din guide för att arbeta med den live Mugharred installationen.
    npm install @types/<package-name> --save-dev
    ```
 
-3. **Bygg för produktion:**
+3. **Testing modal system:**
+   ```bash
+   # After making changes to modal content, verify:
+   npm run dev
+   # 1. Open http://localhost:5173
+   # 2. Scroll to footer
+   # 3. Click Privacy Policy, Terms, or About
+   # 4. Modal should open with updated content
+   ```
+
+4. **Build for production:**
    ```bash
    npm run build
    cp -r dist/* frontend/dist/

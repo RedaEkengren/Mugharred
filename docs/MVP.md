@@ -1,380 +1,216 @@
 # Mugharred MVP Specification
 
-Minimal Viable Product specification för Mugharred social feed.
+Minimal Viable Product specification for Mugharred - Instant Rooms for Everything.
 
-## Vad är MVP:n?
+## Vision: Global Instant Rooms Platform
 
-En fullt fungerande social feed som demonstrerar kärnkoncepten för Mugharred:
-- Enkelhet framför komplexitet  
-- Realtid över optimering
-- **Enterprise-grade säkerhet**
-- En sida för allt
-- Automatisk användarhantering
+Mugharred is a primitive that can be used for anything - not a niche app. 
+**Core koncept**: Instant rooms → share link → join → talk → leave → room expires
 
-**Status: ✅ FULLT ÅTERSTÄLLT OCH SÄKRAT**
+## MVP Core Principles
 
-**Framgångsrik integration av avancerad design med enterprise säkerhet! Landing page med modern glassmorphism design, animationer och mobile-first approach har återställts och integrerats med fullständig säkerhet (CSRF, DOMPurify, Redis sessions, etc.) både i backend och frontend.**
+1. **No accounts required** to join (but host can have account)
+2. **Privacy-first**: no ads, no tracking, minimal logging
+3. **One link = one room** (zero friction)
+4. **Neutral space** - for everything from planning to interviews to study sessions
 
-## Kärnfunktioner (✅ Implementerat)
+## What is the MVP?
 
-### 1. Säker Inloggning
-- **Input**: Endast användarnamn (minst 2 tecken)
-- **Validering**: Express-validator client-side och server-side
-- **Session**: Redis-baserad session store med HttpOnly cookies
-- **CSRF Protection**: Double submit cookie pattern
-- **Rate Limiting**: 5 inloggningsförsök per 15 minuter per IP
-- **Begränsning**: Max 5 användare samtidigt
-- **Feedback**: Tydliga felmeddelanden på svenska
+A fully functional instant rooms platform that demonstrates:
+- Simplicity over complexity  
+- Real-time over optimization
+- Enterprise-grade security
+- Instant rooms for all use cases
+- Automatic room management with time limits
 
-### 2. Live Feed
-- **Realtid**: WebSocket för direkta uppdateringar  
-- **Fallback**: HTTP polling som backup (ej implementerat ännu)
-- **Virtualisering**: Endast 10 meddelanden renderade åt gången
-- **Native scroll**: Använder webbläsarens inbyggda scrollbar
-- **Uniform höjd**: Alla meddelanden har samma höjd (80px)
+## MVP v1.0 Roadmap - Instant Rooms
 
-### 3. Message System
-- **Skicka**: Enter eller klick på skicka-knapp
-- **Längd**: Max 500 tecken per meddelande
-- **Rate limiting**: Max 5 meddelanden per 10 sekunder
-- **Trunkering**: Meddelanden visas trunkerade i listan
-- **Fulltext modal**: Klicka för att se hela meddelandet
+### Phase 1: Core Room System (Current → MVP)
+Transform current open chat into instant rooms system:
 
-### 4. Online Users
-- **Lista**: Visa alla online användare (max 5)
-- **Status**: Grön indikator för online status
-- **Realtid**: Uppdateras när användare går online/offline
-- **Auto-cleanup**: Inaktiva användare rensas automatiskt efter 5 min
+1. **Create Room Flow**
+   - Big CTA: "Create a room" 
+   - Room settings: name, duration (15/30/60/120 min), max participants (2-12)
+   - Auto-generated room link: `mugharred.se/r/quiet-sun-5821`
+   - No signup required for room creator (light identity)
 
-### 5. Modern Enterprise Design
-- **Glassmorphism**: Genomskinliga kort med backdrop-blur effekter
-- **Avancerade animationer**: Fade-in, slide-up, scale-in, hover-lift effekter
-- **Mobile-first**: Safe areas, responsive breakpoints, touch targets
-- **Toast notifications**: Professionella meddelanden med auto-timeout
-- **Loading states**: Skeleton screens, spinners, success animations
-- **Brand consistency**: Grön/guld färgschema genomgående
-- **Accessibility**: Focus states, keyboard navigation, screen reader support
+2. **Join Room Flow**
+   - Open link → Enter display name → Join
+   - See who's in the room before joining
+   - No accounts, no friction
 
-## Teknisk Implementation
+3. **Room Features**
+   - Timer countdown (visible to all)
+   - Text chat (current implementation)
+   - Voice/Video toggles (WebRTC P2P for 2-4 people)
+   - Host controls: kick, mute, extend time, lock room
+   - Auto-expire: room destroyed when time ends
 
-### Säker Frontend (React + TypeScript + Security)
-```typescript
-// SecureAPI class för CSRF-skyddade requests
-class SecureAPI {
-  private static csrfToken: string = '';
-  
-  static async secureRequest(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = await this.getCsrfToken();
-    return fetch(url, {
-      ...options,
-      credentials: 'include',
-      headers: { 'X-CSRF-Token': token, ...options.headers }
-    });
-  }
-}
+4. **Privacy & Safety**
+   - Vote-to-kick (host + 1)
+   - Report button
+   - Block in room (local)
+   - Rate limiting on joins
+   - No message history after room expires
 
-// Huvudkomponent med säkerhet och modern design
-export default function MugharredLandingPage() {
-  // Säker state management
-  const [sessionId, setSessionId] = useState<string | null>()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [toast, setToast] = useState<ToastType | null>(null)
-  
-  // Säker login med DOMPurify sanitization
-  const handleSubmit = async (e: React.FormEvent) => {
-    const sanitizedName = DOMPurify.sanitize(name.trim());
-    const response = await SecureAPI.secureRequest('/api/login', {
-      method: 'POST',
-      body: JSON.stringify({ name: sanitizedName })
-    });
-  }
-  
-  // Säker WebSocket med input sanitization
-  socket.onmessage = (event) => {
-    const sanitizedMessage = {
-      ...data.message,
-      text: DOMPurify.sanitize(data.message.text),
-      user: DOMPurify.sanitize(data.message.user)
-    };
-  }
-}
+### Phase 2: Enhanced Communication (v1.1)
+5. **WebRTC Integration**
+   - Voice chat with push-to-talk option
+   - Video with cam on/off toggle
+   - Mute by default option
+   - P2P for small rooms (2-4), consider SFU for larger
+
+6. **Room Roles**
+   - Host (creator) with admin powers
+   - Speaker/Listener modes for presentations
+   - Lobby mode (host approves joins)
+
+7. **Share & Invite**
+   - Copy link button
+   - Optional passcode
+   - Share to social/messaging apps
+
+### Phase 3: Light Features (v1.2)
+8. **Templates**
+   - Pre-configured room types: Interview, Planning, Study Session
+   - Just presets, not different products
+
+9. **Link Sharing & Preview**
+   - Safe link preview for images
+   - Pin important messages
+   - NO file uploads in MVP (legal/abuse risks)
+
+10. **Monetization (Optional)**
+    - Free: 30-60 min rooms, max 4 video participants
+    - Supporter (€5/mo): longer rooms, more participants, passcode protection
+
+## Landing Page Copy
+
+**Hero Section:**
+```
+Create a room
+No signup. No downloads. Just a link.
+
+Instant Rooms for → Planning → Interviews → Study Sessions → Customer Calls → Hangouts
+(rotating text animation)
 ```
 
-### Säker Backend (Node.js + Express + WS)
-```typescript
-// Redis session store för säkerhet
-const redisClient = createClient({ url: REDIS_URL })
-app.use(session({
-  store: new RedisStore({ client: redisClient }),
-  secret: SESSION_SECRET,
-  cookie: { httpOnly: true, secure: true, sameSite: 'strict' }
-}))
+## Technical Architecture for Instant Rooms
 
-// CSRF protection på alla POST endpoints
-const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => SESSION_SECRET,
-  getSessionIdentifier: (req) => req.session?.id || ''
-})
+### Current Stack (Keep)
+- Frontend: React + TypeScript + Tailwind
+- Backend: Node.js + Express + WebSocket
+- Security: Redis sessions, CSRF, rate limiting
+- Deployment: PM2 + Nginx
 
-// Input sanitization med DOMPurify
-function sanitizeInput(input: string): string {
-  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [] })
-}
+### New Components Needed
+- Room management service
+- WebRTC signaling 
+- Timer/expiry system
+- Room state in Redis (temporary)
 
-// Rate limiting med IP-baserad begränsning
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 100,
-  message: "För många förfrågningar"
-})
-```
+### Scaling Strategy
+- Start with P2P WebRTC (light on server)
+- Add SFU later if needed (LiveKit/mediasoup)
+- Keep text chat as primary (low bandwidth)
+- Video as optional enhancement
 
-### Säker Infrastructure
-- **Nginx**: Reverse proxy + static file serving
-- **SSL**: Let's Encrypt automatiska certifikat  
-- **Redis**: Session store och caching
-- **Deployment**: PM2 process manager
-- **Security**: Helmet.js security headers
-- **Logging**: Winston security logging
-- **Monitoring**: PM2 + systemd + säkerhetsloggar
+## Smart MVP Prioritization
 
-## Säkerhetsmodell (Enterprise-Grade)
+### Do First (Sprint 1 - Core "Wow")
+✅ Create room → share link → join → textchat
+✅ Display name + avatar color  
+✅ Duration + auto-expire
+✅ Room destroyed when empty or time ends
 
-### Begränsningar för MVP
-1. **Max 5 användare**: Håller nere serverbelastning
-2. **In-memory storage**: Inga persistenta data = mindre risk
-3. **Rate limiting**: Förhindrar spam och enkla attacker
-4. **Kort meddelanden**: 500 tecken max
-5. **Auto-logout**: Automatisk utloggning efter 5 minuters inaktivitet
-6. **Ingen e-post**: Undviker persondata hantering
+### Do Second (Sprint 2 - Media)
+🔲 Voice/video with mic/cam toggles
+🔲 Basic grid UI for video
+🔲 P2P WebRTC (max 4 people)
+🔲 Audio-only fallback for larger rooms
 
-### Vad som INTE finns (medvetet)
-- ❌ Lösenord eller autentisering
-- ❌ Persistent storage/databas
-- ❌ Användar profiler  
-- ❌ Privata meddelanden
-- ❌ Moderering/admin funktioner
-- ❌ Fil uppladdning
-- ❌ Push notiser
+### Do Third (Sprint 3 - Safety)
+🔲 Vote-to-kick mechanism
+🔲 Report/block functionality
+🔲 Lobby mode for host control
+🔲 Rate limiting refinements
 
-## Användar Workflow
+## Critical Decisions
 
-### Ny Användare
-1. Laddar mugharred.se
-2. Ser landing page med förklaring
-3. Scrollar ner till "Gå med" sektion
-4. Skriver sitt namn (minst 2 tecken)
-5. Klickar "Anslut"
-6. Omdirigeras till live feed vy
+### What NOT to Build (MVP)
+❌ **NO file uploads** - Legal nightmares, abuse, storage costs
+❌ **NO permanent accounts** - Keep it instant
+❌ **NO message history** - Privacy first, no archives
+❌ **NO DMs** - All communication in room (safer)
+❌ **NO complex moderation** - Just kick/block/report
 
-### Aktiv Användare  
-1. Ser online användare (max 5)
-2. Skriver meddelande (max 500 tecken)
-3. Trycker Enter eller "Skicka"
-4. Meddelandet dyker upp direkt i feed
-5. Kan klicka på meddelanden för fulltext
-6. Kan scrolla bakåt för att se äldre meddelanden
+### Smart Alternatives
+✅ Link sharing with preview (let others host files)
+✅ Suggest Catbox/Drive/Dropbox for file needs
+✅ Pin important messages temporarily
+✅ Text snippets/code blocks instead of files
 
-### Användare som Loggar Ut
-1. Klickar "Logga ut" eller stänger fliken
-2. WebSocket anslutning bryts
-3. Tas bort från online lista för andra
-4. Session data rensas från localStorage
+## Server Load Considerations
 
-## Performance Målsättningar
+### P2P WebRTC (Recommended Start)
+- Server load: Minimal (just signaling)
+- User bandwidth: Each sends to all others
+- Works well: 2-4 people
+- Falls apart: 5+ people
 
-### Svarstider
-- **Login**: < 500ms
-- **Skicka meddelande**: < 200ms  
-- **Få nya meddelanden**: < 100ms (WebSocket)
-- **Ladda äldre meddelanden**: < 300ms
+### If You Need SFU Later
+- Consider LiveKit (easiest) or mediasoup
+- Only for "large rooms" or paid tiers
+- Keep P2P for small rooms (cost optimization)
 
-### Skalning
-- **Samtidiga användare**: 5 (hårdkodad begränsning)
-- **Meddelanden per minut**: Max 150 (5 users × 5 msgs/10sec × 6)
-- **Memory usage**: < 50MB för backend
-- **CPU usage**: < 10% på moderna server
+### Bandwidth Optimization Tips
+- Default to audio-only
+- Low video quality to start
+- Auto-disable video when tab backgrounded
+- Hard participant limits per room
 
-### UX Målsättningar
-- **Time to interactive**: < 2 sekunder
-- **Mobile responsive**: Funkar på alla skärmstorlekar
-- **Accessibility**: Tangentbord navigation, screen reader support
-- **Offline graceful**: Visa error meddelanden vid nätverksproblem
+## Why This Works (Philosophy)
 
-## Test Scenarios
+### For Users
+- **Zero friction** - No signup fatigue
+- **No social pressure** - Not another social network
+- **No permanence anxiety** - Everything disappears
+- **No app install** - Works everywhere instantly
 
-### Kritiska User Journeys
-1. **Happy path**: Login → skicka meddelande → få svar → logga ut
-2. **Concurrent users**: 5 användare samtidigt chattar
-3. **Rate limiting**: Användare försöker skicka för många meddelanden
-4. **Connection drops**: WebSocket förlorar anslutning och återansluter
-5. **Long messages**: 500 tecken meddelande visas korrekt i modal
+### For You (Developer)
+- **Low cost** - Minimal server resources with P2P
+- **Low legal risk** - No stored content, no moderation burden
+- **Simple scaling** - Just add more signaling capacity
+- **Clear mental model** - Rooms expire, period
 
-### Edge Cases
-1. **6:e användare**: Får felmeddelande om "För många online"
-2. **Duplikat namn**: Tillåts för MVP enkelhet  
-3. **Emoji**: Fungerar i meddelanden
-4. **Långt namn**: 50+ tecken används namn
-5. **Refresh under session**: Återansluter automatiskt
+### Market Fit
+- ✅ **Simple** enough for grandparents
+- ✅ **Flexible** enough for any use case  
+- ✅ **Private** enough for sensitive conversations
+- ✅ **Temporary** enough to feel safe
+- ✅ **Global** - Works for any culture/language
 
-## Success Metrics
+## The Magic: It's NOT Another Platform
 
-### Tekniska Metrics
-- ✅ Backend uptime > 99%
-- ✅ WebSocket connection success rate > 95%  
-- ✅ Message delivery latency < 200ms
-- ✅ Zero data loss during normal operation
-- ✅ Graceful degradation vid problems
+Mugharred is infrastructure, not destination.
+Like a park bench - you use it, then leave.
+No profiles. No feeds. No FOMO.
+Just human connection when needed.
 
-### Användbar Metrics  
-- ✅ Users kan ansluta inom 30 sekunder
-- ✅ Chatt conversation flöde känns naturligt
-- ✅ Inga förvirrade användare kring interface
-- ✅ Mobile experience lika bra som desktop
-- ✅ Inga säkerhets incidenter
+## Success Metrics for MVP
 
-## Begränsningar och Trade-offs
+1. **Time to first room**: < 10 seconds
+2. **Join friction**: 1 click + name
+3. **Server cost per room**: < €0.01
+4. **Abuse reports**: < 1%
+5. **Natural growth**: Users create multiple rooms
 
-### Medvetna Begränsningar
-1. **Skalning**: Endast 5 användare (enkelt att ändra senare)
-2. **Persistence**: Meddelanden försvinner vid server restart
-3. **Moderering**: Ingen content filtering eller admin tools
-4. **Analytics**: Ingen tracking eller metrics collection
-5. **Backup**: Ingen data backup (inget att backupera)
+## Final Note: Keep It Pure
 
-### MVP vs Future Features
+The biggest risk is feature creep.
+Every feature ask yourself:
+"Does this make rooms better in the first 10 seconds?"
+If no → skip it.
 
-#### MVP (Nu)
-- Basic chat functionality
-- 5 users max  
-- In-memory storage
-- Simple rate limiting
-- One page application
+**Remember**: You're building digital park benches, not digital real estate.
 
-#### Post-MVP (Framtiden)
-- Database storage (PostgreSQL)
-- Användare registrering med e-post
-- Rooms/kanaler
-- Moderering och admin tools
-- File sharing
-- Push notifications
-- Mobile app
-
-## Deployment Criteria
-
-För att MVP ska anses "klar":
-
-### Funktionalitet ✅
-- [x] Landing page fungerar och ser bra ut
-- [x] Login med namn fungerar
-- [x] Max 5 användare begränsning fungerar  
-- [x] Real-time meddelanden via WebSocket
-- [x] Virtual scroll med native scrollbar
-- [x] Message modal för fulltext
-- [x] Online users lista
-- [x] Rate limiting fungerar
-- [x] Responsiv design för mobil
-
-### Teknisk ✅  
-- [x] Frontend byggd och deployed
-- [x] Backend körs stabilt med PM2
-- [x] Nginx proxy konfigurerad
-- [x] SSL certifikat aktiverat
-- [x] Monitoring och logging setup
-- [x] Error handling för vanliga fall
-
-### Dokumentation ✅
-- [x] README med overview
-- [x] DEPLOYMENT guide
-- [x] HOWTO för utveckling 
-- [x] MVP spec (denna fil)
-- [x] Git repository setup med .gitignore
-
-## Post-Launch Plan
-
-### Vecka 1: Monitoring
-- Övervaka server logs för errors
-- Testa med riktiga användare
-- Samla feedback på user experience
-- Dokumentera buggar och önskemål
-
-### Vecka 2-4: Bugfixes
-- Fixa kritiska buggar från week 1
-- Förbättra error handling
-- Optimera performance om nödvändigt
-- Förbättra mobile experience
-
-### Månad 2+: Next Features
-- Persistent storage (PostgreSQL)
-- Öka användare limit till 25-50
-- Lägg till rooms/channels
-- Basic moderering tools
-- Push notifications
-
-## MVP Status: ✅ KLART!
-
-MVP:n är nu **100% komplett** och live på https://mugharred.se! 🎉
-
-### Senaste Uppdateringar (December 12, 2025)
-- ✅ **SÄKERHET**: Fullständig CSRF protection med SecureAPI class
-- ✅ **SÄKERHET**: DOMPurify sanitization på all user input/output
-- ✅ **SÄKERHET**: Redis sessions med HttpOnly cookies
-- ✅ **DESIGN**: Avancerad glassmorphism med moderna animationer
-- ✅ **UX**: Toast notifications system för professionell feedback
-- ✅ **MOBILE**: Mobile-first design med safe areas och touch targets
-- ✅ **ACCESSIBILITY**: Full keyboard navigation och focus states
-- ✅ **PERFORMANCE**: Loading states och skeleton screens
-- ✅ Auto-logout efter 5 min inaktivitet implementerat
-- ✅ Backend cleanup-process för inaktiva användare
-- 🔧 **BUGFIX**: Kritisk WebSocket sessionId mismatch löst (2025-12-12)
-- ✅ Dokumentation uppdaterad med senaste buggfix och lösningar
-
-### Live Testing Resultat  
-- ✅ **SÄKERHET**: CSRF tokens fungerar på alla POST endpoints
-- ✅ **SÄKERHET**: Input sanitization blockerar XSS attacker
-- ✅ **SÄKERHET**: Redis sessions håller användare inloggade säkert
-- ✅ **DESIGN**: Glassmorphism animationer flyter perfekt på alla enheter
-- ✅ **UX**: Toast notifications ger tydlig feedback vid alla actions
-- ✅ WebSocket realtid fungerar perfekt med sanitization (NYLIGEN FIXAD)
-- 🔧 **FIX**: SessionId mismatch i broadcast() funkton löst
-- ✅ Rate limiting blockerar spam korrekt  
-- ✅ Max 5 användare begränsning fungerar
-- ✅ Auto-logout efter 5 min inaktivitet verified
-- ✅ Virtual scroll prestanda excellent
-- ✅ SSL/HTTPS deployment stabil
-- ✅ Login och chat-funktionalitet verifierad efter buggfix
-
-### Visual Identity & Brand Enhancement (2025-12-13)
-- 🎨 **Logo Implementation**: Professionell WebP-logotyp med avrundade hörn implementerad
-- 🖼️ **Favicon**: 32x32 ICO-format favicon skapad och deployad
-- ✨ **Visual Effects**: Rounded-2xl design med ring-4 effekter för landing page
-- 💫 **Interactive Design**: Hover-effekter och transition animations för logotyp
-- 🌐 **Nginx Optimization**: WebP MIME-typ support tillagd för optimal prestanda
-- 📱 **Cross-platform**: Logo fungerar perfekt på alla enheter och skärmstorlekar
-- 🎯 **Brand Consistency**: Visuell identitet nu komplett och professionell
-
-### Landing Page Enhancement & Critical Bug Fix (2025-12-13)
-- ✅ **Implementation**: Ersatte "fattig" landing page med rik modern design
-- ⚠️ **Critical Issue**: Mock-meddelande blockerade riktig backend-anslutning
-- ✅ **Root Cause**: Korrupt `frontend/assets/` katalog med gamla JS-filer
-- ✅ **Resolution**: Total korruptionseliminering enligt GOLDEN RULES
-- ✅ **Backend Integration**: SecureAPI.secureRequest('/api/login') nu funktionell
-- ✅ **Build**: TypeScript kompilerar utan fel, nya assets (D-CUimmE hash)
-- ✅ **Design**: Modern glassmorphism med radial gradients bevarad
-- 🎯 **Resultat**: Fullt fungerande backend + frontend integration UPPNÅTT
-
-**Critical Bug Resolution Steps:**
-- 🔍 **Identifierat**: Mock-alert i `frontend/assets/index-wPj6QX0q.js`
-- 🧹 **Eliminerat**: Korrupta assets-filer och index.html referenser
-- 🔄 **Force Clean Build**: Nya hash-generering för cache-buster
-- ✅ **Verification**: Ingen "Koppla detta" text i byggda filer
-- 🚀 **Deploy**: Nya assets (CVvBes9R.js, cOhOy_oZ.css) live
-
-**Final Working Features:**
-- 🎨 **Modern Design**: Behållen glassmorphism och responsiv layout + WebP logotyp
-- 🔐 **Backend Integration**: Riktig CSRF-skyddad login via `/api/login`
-- 💬 **Chat Functionality**: WebSocket, virtual scroll, modal fulltext
-- 🛡️ **Enterprise Security**: Aktiverad och funktionell (ej bypass)
-- 🖼️ **Visual Identity**: Professionell logotyp med moderna hover-effekter
-- 🌐 **Optimal Performance**: WebP-bilder för snabbare laddning
-
-**Mugharred är redo för riktiga användare med komplett visuell identitet! 🚀**

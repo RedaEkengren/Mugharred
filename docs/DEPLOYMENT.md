@@ -1,10 +1,10 @@
 # Deployment Guide
 
-Guide för att deploiera Mugharred till produktion.
+Guide for deploying Mugharred to production.
 
-**Status: ✅ REDAN DEPLOYAD på https://mugharred.se**
+**Status: ✅ ALREADY DEPLOYED at https://mugharred.se**
 
-Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du kan uppdatera eller replikera den.
+This document describes how the current installation is set up and how you can update or replicate it.
 
 ## Produktionsmiljö
 
@@ -28,7 +28,7 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 - **Security**: Enterprise-grade säkerhetsimplementering
 - **Process Manager**: PM2 med auto-restart
 - **Status**: ✅ Stabil och live sedan December 12, 2025
-- **Latest**: ✅ WebSocket sessionId mismatch buggfix deployed (2025-12-12)
+- **Latest**: ✅ Global English interface and legal page modals deployed (2025-12-27)
 
 ## Deployment Process
 
@@ -38,25 +38,25 @@ Detta dokument beskriver hur den nuvarande installationen är uppsatt och hur du
 # Gå till backend mappen
 cd backend
 
-# Installera dependencies (inkluderar säkerhetspaket)
+# Install dependencies (includes security packages)
 npm install
 
-# Konfigurera miljövariabler
+# Configure environment variables
 cp .env.example .env
-# Redigera .env med produktionsvärden:
+# Edit .env with production values:
 # NODE_ENV=production
 # SESSION_SECRET=<stark-slumpmässig-sträng>
 # JWT_SECRET=<stark-slumpmässig-sträng>
 # REDIS_URL=redis://localhost:6379
 
-# Starta Redis server
+# Start Redis server
 sudo systemctl start redis-server
 sudo systemctl enable redis-server
 
-# Bygg TypeScript
+# Build TypeScript
 npm run build
 
-# Testa att det funkar
+# Test that it works
 npm start
 ```
 
@@ -361,11 +361,25 @@ cd backend && npm audit && npm audit fix
    sudo journalctl -u mugharred -n 50
    ```
 
-2. **WebSocket anslutningar misslyckas** ⚠️ SENAST FIXAD 2025-12-12
+2. **Legal page links broken** ⚠️ FIXED 2025-12-27  
    ```bash
-   # KRITISK FIX IMPLEMENTERAD:
-   # Problem: Users togs premature bort från onlineUsers Map av broadcast()
-   # Lösning: Uppdaterad broadcast logic för korrekt hantering
+   # CRITICAL FIX IMPLEMENTED:
+   # Problem: Footer links pointed to non-existent HTML files (/privacy.html, /terms.html, /about.html)
+   # Solution: Implemented React modal system for Privacy, Terms, About pages
+   # Compliance: Removed unauthorized HTML files as per Golden Rules
+   
+   # Verify modal system works:
+   # 1. Visit https://mugharred.se
+   # 2. Scroll to footer
+   # 3. Click Privacy Policy, Terms, or About
+   # 4. Modal should open with full content
+   ```
+
+3. **WebSocket connections fail** ⚠️ FIXED 2025-12-12
+   ```bash
+   # CRITICAL FIX IMPLEMENTED:
+   # Problem: Users were prematurely removed from onlineUsers Map by broadcast()
+   # Solution: Updated broadcast logic for correct handling
    
    # DEBUG STEPS:
    # Kontrollera att backend lyssnar på rätt port

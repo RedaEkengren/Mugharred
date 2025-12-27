@@ -82,3 +82,72 @@ Skipping a step is forbidden.
 ## CANONICAL PROJECT STRUCTURE
 
 This repository recognizes ONLY the following structure:
+
+/frontend → client application (builds to frontend/dist)
+/backend → server application (builds to backend/dist)
+/scripts → all state-changing scripts
+/golden.md → this file
+
+
+Any other project, dist, build, or nested structure is INVALID unless explicitly approved.
+
+---
+
+## DIST / BUILD RULES
+
+- Frontend build output: `frontend/dist`
+- Backend build output: `backend/dist`
+- Root `dist/` is FORBIDDEN
+- Root builds are FORBIDDEN
+
+If a root `dist/` exists, it is INVALID by definition.
+
+---
+
+## DEPLOYMENT RULES
+
+- Deployment MUST come from ONE known path only
+- Deployment MUST be performed via script
+- `index.html` and its referenced assets MUST originate from the SAME build
+
+Deploying mixed or mismatched assets is considered corruption.
+
+---
+
+## AI-SPECIFIC RULES
+
+If you are an AI agent:
+
+- You may NOT create files freely
+- You may NOT duplicate directories
+- You may NOT generate alternative solutions in parallel
+- You may NOT "try something and see"
+
+You MUST:
+- ask for inventory first
+- wait for approval before execution
+- stop if rules are unclear
+
+Failure to comply = TERMINATE TASK.
+
+---
+
+## SAFETY GUARANTEE
+
+These rules exist to:
+- prevent chaos
+- prevent silent corruption
+- prevent broken deployments
+- preserve operator sanity
+
+They override all convenience.
+
+---
+
+## FINAL CLAUSE
+
+If any instruction conflicts with this file:
+
+**THIS FILE WINS.**
+
+No exceptions.

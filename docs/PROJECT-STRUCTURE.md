@@ -1,35 +1,36 @@
 # Mugharred Project Structure
 
-Översikt över projektets filstruktur och organisation.
+Overview of the project's file structure and organization.
 
-**Live Production System på https://mugharred.se**
+**Live Production System at https://mugharred.se**
 
-Detta dokument beskriver hur den nuvarande live installationen är organiserad.
+This document describes how the current live installation is organized.
 
-## 🔧 Senaste Uppdateringen (2025-12-12)
+## 🌍 Latest Update (2025-12-27)
 
-**Kritisk WebSocket Buggfix Implementerad:**
-- ✅ **Problem**: SessionId mismatch i broadcast() förhindrade WebSocket connections
-- ✅ **Root Cause**: Users togs premature bort från onlineUsers Map 
-- ✅ **Lösning**: Uppdaterad broadcast logic för att skydda users utan WebSocket ännu
-- ✅ **Resultat**: Chat och realtidsuppdateringar fungerar nu korrekt
+**Global English Interface & Modal System Implemented:**
+- ✅ **Feature**: Complete English translation for worldwide usage
+- ✅ **Legal Pages**: Privacy, Terms, About now work as React modals instead of broken HTML files
+- ✅ **Footer**: Professional footer with working benbo.se legal connections
+- ✅ **Compliance**: Fixed Golden Rules violations by removing unauthorized HTML files
+- ✅ **Result**: Global-ready platform with properly functioning legal page system
 
 ## Rot Nivå
 
 ```
 mugharred/
-├── 📁 backend/              # Säker Node.js backend server
-├── 📁 docs/                 # Projektdokumentation
+├── 📁 backend/              # Secure Node.js backend server
+├── 📁 docs/                 # Project documentation
 ├── 📁 frontend/             # Production frontend build
-├── 📁 src/                  # Frontend källkod (React + Security)
+├── 📁 src/                  # Frontend source code (React + Security)
 ├── 📄 .gitignore           # Git ignore patterns
-├── 📄 README.md            # Huvuddokumentation
-├── 📄 package.json         # Frontend dependencies (inkl. DOMPurify)
-├── 📄 tsconfig.json        # TypeScript konfiguration (frontend)
-├── 📄 tailwind.config.js   # Tailwind CSS konfiguration
-├── 📄 postcss.config.js    # PostCSS konfiguration
-├── 📄 vite.config.ts       # Vite build tool konfiguration
-└── 📄 index.html           # HTML mall för SPA
+├── 📄 README.md            # Main documentation
+├── 📄 package.json         # Frontend dependencies (incl. DOMPurify)
+├── 📄 tsconfig.json        # TypeScript configuration (frontend)
+├── 📄 tailwind.config.js   # Tailwind CSS configuration
+├── 📄 postcss.config.js    # PostCSS configuration
+├── 📄 vite.config.ts       # Vite build tool configuration
+└── 📄 index.html           # HTML template for SPA
 ```
 
 ## Backend (`/backend/`)
@@ -128,13 +129,14 @@ src/
   - Mobile-first responsive design med safe areas
   - Toast notification system för user feedback
   - Loading states med skeleton screens och spinners
-  - Brand-consistent grön/guld färgschema
-  - Accessibility med focus states och keyboard navigation
+  - Brand-consistent green/gold color scheme
+  - Legal page modal system (Privacy, Terms, About) replacing broken HTML files
+  - Accessibility with focus states and keyboard navigation
 - **Landing Page State** (Icke-inloggade användare):
   - Modern hero sektion med glassmorphism
   - Animated features showcase med hover effekter
   - Säker login formulär med loading states
-  - Professional footer med branding
+  - Professional footer with working legal page modal triggers
 - **Live Feed State** (Inloggade användare):
   - Clean header med connection status indicator
   - Säker logout med session cleanup
@@ -339,20 +341,21 @@ const [onlineUsers, setOnlineUsers] = useState<string[]>([])
 const [input, setInput] = useState("")
 const [expandedMessage, setExpandedMessage] = useState<Message | null>()
 const [scrollTop, setScrollTop] = useState(0)
+const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'about' | null>(null)
 ```
 
 ### Backend State
 ```typescript
-// In-memory storage (production ready för MVP)
+// In-memory storage (production ready for MVP)
 const messages: Message[] = []
 const onlineUsers = new Map<string, OnlineUser>()
 
-// Rate limiting och auto-logout
+// Rate limiting and auto-logout
 const messageTimestamps = new Map<string, number[]>()
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minuter
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
 // Auto-cleanup process
-setInterval(cleanupInactiveUsers, 60_000) // Körs varje minut
+setInterval(cleanupInactiveUsers, 60_000) // Runs every minute
 ```
 
 ## Build Process

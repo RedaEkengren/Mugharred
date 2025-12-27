@@ -7,7 +7,7 @@ module.exports = {
     cwd: '/home/reda/development/mugharred',
     env: {
       NODE_ENV: 'production',
-      PORT: 3001
+      PORT: 3010
     },
     error_file: './backend/logs/err.log',
     out_file: './backend/logs/out.log',

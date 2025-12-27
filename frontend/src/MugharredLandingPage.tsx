@@ -67,8 +67,35 @@ export default function MugharredLandingPage() {
   // Login state
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  
+  // Rotating text for hero section
+  const rotatingTexts = [
+    "Trip planning",
+    "Job interviews", 
+    "Study sessions",
+    "Team meetings",
+    "Friend chats",
+    "Quick calls",
+    "Customer support",
+    "Book clubs",
+    "Gaming sessions",
+    "Brainstorming"
+  ];
+  
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prev) => (prev + 1) % rotatingTexts.length);
+    }, 2500);
+    
+    return () => clearInterval(interval);
+  }, [rotatingTexts.length]);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
+  
+  // Modal state for legal pages
+  const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'about' | null>(null);
   
   // Feed state
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -159,10 +186,10 @@ export default function MugharredLandingPage() {
         heartbeatInterval.current = null;
       }
       
-      showToast("Du har loggats ut", "success");
+      showToast("Logged out successfully", "success");
     } catch (error) {
       console.error('Logout error:', error);
-      showToast("Fel vid utloggning", "error");
+      showToast("Logout error", "error");
     }
   };
 
@@ -180,7 +207,7 @@ export default function MugharredLandingPage() {
       socket.onopen = () => {
         setWsConnected(true);
         reconnectAttempts = 0;
-        showToast("Ansluten till realtid", "success");
+        showToast("Connected to real-time", "success");
       };
 
       socket.onmessage = (event) => {
@@ -218,10 +245,10 @@ export default function MugharredLandingPage() {
         
         if (reconnectAttempts < maxReconnectAttempts && sessionId) {
           reconnectAttempts++;
-          showToast(`Återansluter... (${reconnectAttempts}/${maxReconnectAttempts})`, "info");
+          showToast(`Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`, "info");
           setTimeout(connect, Math.min(1000 * Math.pow(2, reconnectAttempts), 10000));
         } else if (reconnectAttempts >= maxReconnectAttempts) {
-          showToast("Anslutning misslyckades. Ladda om sidan.", "error");
+          showToast("Connection failed. Please reload.", "error");
         }
         
         if (heartbeatInterval.current) {
@@ -284,7 +311,7 @@ export default function MugharredLandingPage() {
         })
         .catch((error) => {
           console.error("Failed to load messages:", error);
-          showToast("Kunde inte ladda meddelanden", "error");
+          showToast("Failed to load messages", "error");
         });
 
       fetch("/api/online-users", {
@@ -321,16 +348,16 @@ export default function MugharredLandingPage() {
         const data = await response.json();
         setSessionId(data.sessionId);
         setName(sanitizedName);
-        showToast(`Välkommen ${sanitizedName}!`, "success");
+        showToast(`Welcome ${sanitizedName}!`, "success");
       } else {
         const data = await response.json();
-        setLoginError(data.error || "Inloggning misslyckades");
-        showToast(data.error || "Inloggning misslyckades", "error");
+        setLoginError(data.error || "Login failed");
+        showToast(data.error || "Login failed", "error");
       }
     } catch (error) {
       console.error("Login error:", error);
-      setLoginError("Nätverksfel. Försök igen.");
-      showToast("Nätverksfel. Försök igen.", "error");
+      setLoginError("Network error. Please try again.");
+      showToast("Network error. Please try again.", "error");
     } finally {
       setLoginLoading(false);
     }
@@ -392,14 +419,14 @@ export default function MugharredLandingPage() {
         )}
         
         {/* Header */}
-        <header className="relative overflow-hidden">
+        <header className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 to-green-600/10">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/20 via-green-500/10 to-yellow-400/20"></div>
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="text-center">
               <div className="flex items-center justify-center mb-6">
                 <img 
                   src="/logo.webp" 
-                  alt="Mugharred logotype" 
+                  alt="Mugharred" 
                   className="h-16 w-auto rounded-2xl shadow-2xl ring-4 ring-white/50 hover:ring-emerald-300/70 transition-all duration-300"
                 />
               </div>
@@ -408,19 +435,79 @@ export default function MugharredLandingPage() {
                   Mugharred
                 </span>
               </h1>
-              <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-                En social feed som uppdateras live. Hoppa in med bara ditt namn och upplev äkta samtal utan krångel.
-              </p>
+              <div className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+                <p className="mb-4">
+                  Create a room for{" "}
+                  <span className="inline-block min-w-[200px] text-left">
+                    <span 
+                      key={currentTextIndex}
+                      className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent font-semibold animate-fade-in"
+                    >
+                      {rotatingTexts[currentTextIndex]}
+                    </span>
+                  </span>
+                </p>
+                <p className="text-lg text-gray-500">
+                  No signup. No downloads. Just a link.
+                </p>
+              </div>
+              
+              {/* CTA Form directly in hero */}
+              <div className="max-w-md mx-auto">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name..."
+                      className="w-full px-6 py-4 text-lg rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white/90 backdrop-blur-sm shadow-lg"
+                      required
+                      minLength={2}
+                      maxLength={50}
+                      disabled={loginLoading}
+                    />
+                  </div>
+                  
+                  {loginError && (
+                    <div className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                      {loginError}
+                    </div>
+                  )}
+                  
+                  <button
+                    type="submit"
+                    disabled={loginLoading || !name.trim()}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg shadow-xl hover:shadow-2xl"
+                  >
+                    {loginLoading ? (
+                      <>
+                        <Loader2 className="animate-spin" size={20} />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        Create Room
+                        <ArrowRight size={20} />
+                      </>
+                    )}
+                  </button>
+                </form>
+                <p className="text-sm text-gray-500 mt-4">
+                  Ready in 10 seconds
+                </p>
+              </div>
             </div>
           </div>
         </header>
+
 
         {/* Features */}
         <section className="py-16 bg-white/50 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Varför Mugharred?</h2>
-              <p className="text-lg text-gray-600">Enkelt, snabbt och säkert</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Why instant rooms?</h2>
+              <p className="text-lg text-gray-600">Simple, fast and private</p>
             </div>
             
             <div className="grid md:grid-cols-3 gap-8">
@@ -428,93 +515,209 @@ export default function MugharredLandingPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Zap className="text-white" size={24} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Realtid</h3>
-                <p className="text-gray-600">Meddelanden visas omedelbart för alla användare. Ingen fördröjning, bara äkta konversation.</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Real-time</h3>
+                <p className="text-gray-600">Messages appear instantly. No delays, just genuine conversation.</p>
               </div>
               
               <div className="group p-8 rounded-xl bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Shield className="text-white" size={24} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Säkerhet först</h3>
-                <p className="text-gray-600">Enterprise-grad säkerhet med CSRF-skydd, input sanitization och säkra sessioner.</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Privacy first</h3>
+                <p className="text-gray-600">No ads, no tracking, minimal logging. Your conversations stay private.</p>
               </div>
               
               <div className="group p-8 rounded-xl bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Users className="text-white" size={24} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Begränsad till 5</h3>
-                <p className="text-gray-600">Max 5 användare online samtidigt för kvalitetssamtal och optimal prestanda.</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Room expires</h3>
+                <p className="text-gray-600">Set a timer. Room auto-deletes when time runs out. No permanent history.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Join Section */}
-        <section className="py-16 bg-gradient-to-br from-emerald-500/10 to-green-600/10">
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Gå med i Mugharred</h2>
-            <p className="text-lg text-gray-600 mb-8">
-              Skriv bara ditt namn så är du igång. Inga lösenord, inga komplicerade formulär.
-            </p>
-            
-            <div className="max-w-md mx-auto">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ditt namn..."
-                    className="w-full px-6 py-4 text-lg rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white/90 backdrop-blur-sm"
-                    required
-                    minLength={2}
-                    maxLength={50}
-                    disabled={loginLoading}
-                  />
+        {/* Footer */}
+        <footer className="py-16 bg-white/80 backdrop-blur-sm border-t border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              {/* Tagline */}
+              <div className="mb-8">
+                <p className="text-lg text-gray-700 font-medium mb-2">
+                  Privacy-first instant rooms for any conversation
+                </p>
+                <div className="flex items-center justify-center gap-2 text-emerald-600">
+                  <Globe2 size={18} />
+                  <span className="text-sm font-medium">Live at mugharred.se</span>
                 </div>
-                
-                {loginError && (
-                  <div className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg border border-red-200">
-                    {loginError}
+              </div>
+              
+              {/* Links */}
+              <div className="flex flex-wrap items-center justify-center gap-6 mb-8 text-sm">
+                <button 
+                  onClick={() => setActiveModal('privacy')}
+                  className="text-gray-600 hover:text-emerald-600 transition-colors duration-200 font-medium"
+                >
+                  Privacy Policy
+                </button>
+                <span className="text-gray-300">•</span>
+                <button 
+                  onClick={() => setActiveModal('terms')}
+                  className="text-gray-600 hover:text-emerald-600 transition-colors duration-200 font-medium"
+                >
+                  Terms of Service
+                </button>
+                <span className="text-gray-300">•</span>
+                <button 
+                  onClick={() => setActiveModal('about')}
+                  className="text-gray-600 hover:text-emerald-600 transition-colors duration-200 font-medium"
+                >
+                  About
+                </button>
+              </div>
+              
+              {/* Copyright */}
+              <div className="border-t border-gray-200 pt-8">
+                <p className="text-sm text-gray-500">
+                  © 2025 Mugharred. Built with ❤️ for instant human connection.
+                </p>
+              </div>
+            </div>
+          </div>
+        </footer>
+
+        {/* Legal Modals */}
+        {activeModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {activeModal === 'privacy' && 'Privacy Policy'}
+                  {activeModal === 'terms' && 'Terms of Service'}
+                  {activeModal === 'about' && 'About Mugharred'}
+                </h2>
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 overflow-auto max-h-[60vh]">
+                {activeModal === 'privacy' && (
+                  <div className="prose prose-emerald max-w-none">
+                    <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 mb-6">
+                      <p className="font-medium">Effective Date: December 27, 2025</p>
+                    </div>
+                    
+                    <h3>Our Commitment to Privacy</h3>
+                    <p>Mugharred is built on the principle of privacy-first instant rooms. We collect minimal data, store nothing permanently, and never sell your information.</p>
+                    
+                    <h3>What We Collect</h3>
+                    <p>When you use Mugharred, we temporarily collect:</p>
+                    <ul>
+                      <li><strong>Display Name:</strong> The name you choose to appear in rooms</li>
+                      <li><strong>Session Data:</strong> Temporary session identifier for room participation</li>
+                      <li><strong>Messages:</strong> Chat messages during active room sessions</li>
+                      <li><strong>Connection Info:</strong> IP address for rate limiting and abuse prevention</li>
+                    </ul>
+                    
+                    <h3>What We Don't Collect</h3>
+                    <ul>
+                      <li>Email addresses or personal information</li>
+                      <li>Permanent user accounts or profiles</li>
+                      <li>Browsing history or tracking cookies</li>
+                      <li>Voice or video recordings</li>
+                      <li>Message history after rooms expire</li>
+                    </ul>
+                    
+                    <h3>Data Retention</h3>
+                    <p><strong>Temporary by Design:</strong> All room data is automatically deleted when the room timer expires, all participants leave, or after 5 minutes of inactivity.</p>
+                    
+                    <h3>Contact Us</h3>
+                    <p>Questions about this privacy policy? Contact us at: <strong>privacy@mugharred.se</strong></p>
                   </div>
                 )}
                 
-                <button
-                  type="submit"
-                  disabled={loginLoading || !name.trim()}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
-                >
-                  {loginLoading ? (
-                    <>
-                      <Loader2 className="animate-spin" size={20} />
-                      Ansluter...
-                    </>
-                  ) : (
-                    <>
-                      Anslut
-                      <ArrowRight size={20} />
-                    </>
-                  )}
-                </button>
-              </form>
+                {activeModal === 'terms' && (
+                  <div className="prose prose-emerald max-w-none">
+                    <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 mb-6">
+                      <p className="font-medium">Effective Date: December 27, 2025</p>
+                    </div>
+                    
+                    <h3>Welcome to Mugharred</h3>
+                    <p>These Terms of Service govern your use of Mugharred, the privacy-first instant rooms platform. By using our service, you agree to these terms.</p>
+                    
+                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6">
+                      <p><strong>Key Principle:</strong> Mugharred is designed for temporary, respectful human communication. Rooms expire automatically, and we expect all users to treat each other with dignity.</p>
+                    </div>
+                    
+                    <h3>User Responsibilities</h3>
+                    <p>When using Mugharred, you agree to:</p>
+                    <ul>
+                      <li>Treat all participants with respect and dignity</li>
+                      <li>Not share illegal, harmful, or inappropriate content</li>
+                      <li>Not attempt to circumvent rate limits or abuse the service</li>
+                      <li>Respect others' privacy and not record conversations without consent</li>
+                    </ul>
+                    
+                    <h3>Prohibited Activities</h3>
+                    <ul>
+                      <li>Harassment, bullying, or threatening behavior</li>
+                      <li>Sharing illegal content or coordinating illegal activities</li>
+                      <li>Attempting to hack, spam, or disrupt the service</li>
+                      <li>Using the service for commercial advertising without permission</li>
+                    </ul>
+                    
+                    <h3>Contact and Support</h3>
+                    <p>Questions about these terms? Contact us at: <strong>support@mugharred.se</strong></p>
+                  </div>
+                )}
+                
+                {activeModal === 'about' && (
+                  <div className="prose prose-emerald max-w-none">
+                    <h3>The Vision</h3>
+                    <p>Mugharred is built on a simple belief: <strong>digital communication should be human-first, not platform-first.</strong></p>
+                    
+                    <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 my-6 italic text-lg">
+                      "We don't need another social media platform. We need digital infrastructure that gets out of the way and lets humans be human."
+                    </div>
+                    
+                    <p>That's why Mugharred works like a park bench - you use it when you need it, then you leave. No feeds to check, no profiles to maintain, no permanent digital footprint to worry about.</p>
+                    
+                    <h3>Why "Instant Rooms"?</h3>
+                    <p>Traditional platforms focus on building communities around content. We focus on building <strong>temporary spaces around conversations.</strong></p>
+                    
+                    <ul>
+                      <li><strong>Instant:</strong> No setup, no accounts, just create and share a link</li>
+                      <li><strong>Rooms:</strong> Focused spaces for specific conversations</li>
+                      <li><strong>Temporary:</strong> Everything disappears when you're done</li>
+                      <li><strong>Private:</strong> No tracking, no ads, no permanent records</li>
+                    </ul>
+                    
+                    <h3>Built for Everyone</h3>
+                    <p>Mugharred isn't targeted at a specific demographic. It's infrastructure that adapts to whatever you need: team meetings, job interviews, study groups, family calls, gaming sessions, and more.</p>
+                    
+                    <h3>What We Don't Do</h3>
+                    <ul>
+                      <li>❌ No advertising or user tracking</li>
+                      <li>❌ No algorithmic feeds or recommendations</li>
+                      <li>❌ No permanent user profiles</li>
+                      <li>❌ No addictive engagement mechanics</li>
+                    </ul>
+                    
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
+                      <h4 className="font-medium text-yellow-800 mb-2">Built By</h4>
+                      <p className="text-yellow-700">Mugharred is developed by the team at <a href="https://benbo.se" className="font-medium underline" target="_blank" rel="noopener noreferrer">benbo.se</a> - focused on ethical technology and user-centric design.</p>
+                      <p className="text-yellow-700 mt-2"><strong>Contact:</strong> hello@mugharred.se</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="py-12 text-center text-gray-600 bg-white/30 backdrop-blur-sm">
-          <div className="max-w-4xl mx-auto px-4">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Globe2 size={20} className="text-emerald-600" />
-              <span className="font-medium">Live på mugharred.se</span>
-            </div>
-            <p className="text-sm">
-              Mugharred - En enkel social feed som uppdateras live © 2025
-            </p>
-          </div>
-        </footer>
+        )}
       </div>
     );
   }
@@ -542,7 +745,7 @@ export default function MugharredLandingPage() {
               />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Mugharred</h1>
-                <p className="text-sm text-gray-600">Välkommen {name}</p>
+                <p className="text-sm text-gray-600">Welcome {name}</p>
               </div>
             </div>
             
@@ -550,7 +753,7 @@ export default function MugharredLandingPage() {
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 <span className="text-sm text-gray-600">
-                  {wsConnected ? 'Ansluten' : 'Inte ansluten'}
+                  {wsConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
               
@@ -559,7 +762,7 @@ export default function MugharredLandingPage() {
                 className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <LogOut size={16} />
-                Logga ut
+                Log out
               </button>
             </div>
           </div>
@@ -648,7 +851,7 @@ export default function MugharredLandingPage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Skriv ditt meddelande..."
+                    placeholder="Type your message..."
                     className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none transition-colors"
                     maxLength={500}
                     disabled={!wsConnected}
@@ -659,11 +862,11 @@ export default function MugharredLandingPage() {
                     className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
                   >
                     <Send size={16} />
-                    Skicka
+                    Send
                   </button>
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
-                  {input.length}/500 tecken
+                  {input.length}/500 characters
                 </div>
               </div>
             </div>

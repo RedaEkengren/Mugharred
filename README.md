@@ -1,85 +1,91 @@
 # Mugharred
 
-En enkel social feed som uppdateras live - minimalistisk Twitter-klon med WebSocket-support och automatisk inaktivitetshantering.
+Privacy-first instant rooms platform. Create temporary rooms for any conversation - no signup, no tracking, just human connection.
 
-## Översikt
+## 🚀 Live at: https://mugharred.se
 
-Mugharred är en enkelsidig applikation som låter användare chatta i realtid. Applikationen använder en minimalistisk inloggning (endast namn), är begränsad till max 5 användare samtidigt, och loggar automatiskt ut inaktiva användare efter 5 minuter.
+**Status:** ✅ 100% operational with global English interface
 
-### Funktioner
+## Overview
+
+Mugharred is a single-page application for real-time communication. Currently implemented as open chat with plans to become instant rooms platform. Features minimalist login (name only), limited to 5 concurrent users, with automatic logout after 5 minutes of inactivity.
+
+### Features
 
 #### Core Features
-- ✅ **En sida** - Ingen navigation, allt händer på samma vy
-- ✅ **Live feed** - Meddelanden uppdateras i realtid via WebSockets
-- ✅ **Virtual scroll** - Renderar endast 10 meddelanden i taget med native scrollbar
-- ✅ **Modal för fulltext** - Klicka på meddelanden för att se hela texten
-- ✅ **Online-lista** - Se vilka som är online just nu (max 5 samtidigt)
-- ✅ **Rate limiting** - Begränsar spam och attacker (5 meddelanden/10 sek)
-- ✅ **Auto-logout** - Automatisk utloggning efter 5 minuters inaktivitet
+- ✅ **Single Page App** - No navigation, everything happens in one view
+- ✅ **Live Feed** - Messages update in real-time via WebSockets  
+- ✅ **Virtual Scroll** - Renders only 10 messages at a time with native scrollbar
+- ✅ **Fulltext Modal** - Click messages to see complete text
+- ✅ **Online List** - See who's online right now (max 5 concurrent)
+- ✅ **Rate Limiting** - Prevents spam and attacks (5 messages/10 sec)
+- ✅ **Auto-logout** - Automatic logout after 5 minutes of inactivity
 
 #### Modern Enterprise Design
-- ✅ **Glassmorphism UI** - Genomskinliga kort med backdrop-blur effekter
-- ✅ **Avancerade animationer** - Fade-in, slide-up, scale-in, hover-lift effekter
-- ✅ **Mobile-first design** - Safe areas, responsive breakpoints, optimerade touch targets
-- ✅ **Toast notifications** - Professionella meddelanden med auto-timeout
-- ✅ **Loading states** - Skeleton screens, spinners, success animations
-- ✅ **Brand consistency** - Grön/guld färgschema genomgående + modern WebP logotyp
+- ✅ **Glassmorphism UI** - Translucent cards with backdrop-blur effects
+- ✅ **Advanced Animations** - Fade-in, slide-up, scale-in, hover-lift effects
+- ✅ **Mobile-first Design** - Safe areas, responsive breakpoints, optimized touch targets
+- ✅ **Toast Notifications** - Professional messages with auto-timeout
+- ✅ **Loading States** - Skeleton screens, spinners, success animations
+- ✅ **Brand Consistency** - Green/gold color scheme + modern WebP logo
 - ✅ **Accessibility** - Focus states, keyboard navigation, screen reader support
-- ✅ **Backend Integration** - Fullt fungerande login via SecureAPI och /api/login
-- ✅ **Clean state** - Korruption eliminerad enligt GOLDEN RULES, redo för riktiga användare
-- ✅ **Visual Identity** - Professionell WebP-logotyp med avrundade hörn och modern favicon
+- ✅ **Legal Pages** - Privacy, Terms, About accessible via modal system
+- ✅ **Global Ready** - Full English interface for worldwide usage
+- ✅ **Visual Identity** - Professional WebP logo with rounded corners and favicon
 
-### Säkerhet (Enterprise-grad)
+### Security (Enterprise-grade)
 
-- **Session Security**: Redis-baserad session store med HttpOnly cookies
-- **CSRF Protection**: Double submit cookie pattern för alla POST requests
-- **Input Sanitization**: DOMPurify för XSS-skydd på client och server
-- **Rate Limiting**: Express-rate-limit med IP-baserad begränsning
-- **Security Headers**: Helmet.js för säkra HTTP headers
-- **Request Validation**: Express-validator för all input validation
-- **Logging & Monitoring**: Winston för säkerhetsloggning
-- **Authentication**: Säker sessionshantering med auto-logout
-- Max 5 användare online samtidigt (kontrolled)
-- Rate limiting: 5 meddelanden per 10 sekunder
-- Meddelanden begränsade till 500 tecken
+- **Session Security**: Redis-based session store with HttpOnly cookies
+- **CSRF Protection**: Double submit cookie pattern for all POST requests
+- **Input Sanitization**: DOMPurify for XSS protection on client and server
+- **Rate Limiting**: Express-rate-limit with IP-based restrictions
+- **Security Headers**: Helmet.js for secure HTTP headers
+- **Request Validation**: Express-validator for all input validation
+- **Logging & Monitoring**: Winston for security logging
+- **Authentication**: Secure session management with auto-logout
+- Max 5 users online simultaneously (controlled)
+- Rate limiting: 5 messages per 10 seconds
+- Messages limited to 500 characters
 
-## Projektstruktur
+## Project Structure
 
 ```
 mugharred/
 ├── backend/                 # Node.js + TypeScript backend
 │   ├── src/
-│   │   └── server.ts       # Express server med WebSocket
+│   │   └── server.ts       # Express server with WebSocket
 │   ├── package.json
 │   └── tsconfig.json
-├── frontend/               # Deployade frontend filer
-│   └── dist/
-├── src/                    # React frontend källkod
-│   ├── MugharredLandingPage.tsx
-│   ├── main.tsx
-│   └── index.css
-├── docs/                   # Dokumentation
+├── frontend/               # React frontend application
+│   ├── src/                # React source code
+│   │   ├── MugharredLandingPage.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   └── dist/               # Production build
+├── scripts/                # State-changing scripts
+├── docs/                   # Documentation
+├── goldenrules.md          # Project rules
 ├── package.json
 ├── vite.config.ts
 └── README.md
 ```
 
-## Teknik Stack
+## Tech Stack
 
 ### Frontend
-- **React 18** - Modern UI bibliotek med hooks och concurrent features
-- **TypeScript** - Fullständig typsäkerhet
-- **Vite** - Snabb build tool och dev server
-- **Tailwind CSS** - Utility-first CSS med custom design system
-- **Lucide React** - Moderna ikoner
-- **DOMPurify** - XSS sanitization på client-side
+- **React 18** - Modern UI library with hooks and concurrent features
+- **TypeScript** - Complete type safety
+- **Vite** - Fast build tool and dev server
+- **Tailwind CSS** - Utility-first CSS with custom design system
+- **Lucide React** - Modern icons
+- **DOMPurify** - XSS sanitization on client-side
 
 ### Backend
 - **Node.js** - Runtime
-- **Express** - Web framework med säkerhetsförstärkningar
-- **WebSockets (ws)** - Realtidskommunikation
-- **TypeScript** - Typsäkerhet
-- **Redis** - Session store och caching
+- **Express** - Web framework with security enhancements
+- **WebSockets (ws)** - Real-time communication
+- **TypeScript** - Type safety
+- **Redis** - Session store and caching
 - **Security Stack**:
   - Helmet.js - Security headers
   - CSRF-CSRF - Double submit CSRF protection
@@ -90,22 +96,22 @@ mugharred/
 - **CORS** - Cross-origin support
 
 ### Infrastructure
-- **Nginx** - Reverse proxy och static file server
-- **Let's Encrypt** - SSL certificat med auto-renewal
-- **PM2** - Production process manager med monitoring
-- **Redis** - In-memory data store för sessions
-- **Ubuntu Server** - Production miljö
+- **Nginx** - Reverse proxy and static file server
+- **Let's Encrypt** - SSL certificates with auto-renewal
+- **PM2** - Production process manager with monitoring
+- **Redis** - In-memory data store for sessions
+- **Ubuntu Server** - Production environment
 
-## Snabbstart
+## Quick Start
 
-### Krav
+### Requirements
 - Node.js 18+
-- npm eller yarn
-- Redis server (för säkra sessioner)
+- npm or yarn
+- Redis server (for secure sessions)
 
 ### Installation
 
-1. **Klona och installera**
+1. **Clone and install**
    ```bash
    git clone <repository-url>
    cd mugharred
@@ -113,7 +119,7 @@ mugharred/
    cd backend && npm install && cd ..
    ```
 
-2. **Starta Redis server**
+2. **Start Redis server**
    ```bash
    # Ubuntu/Debian
    sudo systemctl start redis-server
@@ -122,14 +128,14 @@ mugharred/
    brew services start redis
    ```
 
-3. **Konfigurera miljövariabler**
+3. **Configure environment variables**
    ```bash
    cd backend
    cp .env.example .env
-   # Redigera .env med dina inställningar
+   # Edit .env with your settings
    ```
 
-4. **Starta utveckling**
+4. **Start development**
    ```bash
    # Terminal 1 - Frontend
    npm run dev
@@ -138,31 +144,31 @@ mugharred/
    cd backend && npm run dev
    ```
 
-5. **Öppna i webbläsare**
+5. **Open in browser**
    ```
    http://localhost:5173
    ```
 
-### Produktion
+### Production
 
-Se [DEPLOYMENT.md](docs/DEPLOYMENT.md) för fullständig deploy guide.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for complete deployment guide.
 
 ## API Endpoints
 
 ### HTTP Endpoints
-- `GET /api/csrf-token` - Hämta CSRF token för säkra requests
-- `POST /api/login` - Logga in med namn (kräver CSRF token)
-- `POST /api/logout` - Logga ut (kräver CSRF token)
-- `GET /api/messages?offset=0&limit=10` - Hämta meddelanden (paginerat, autentiserad)
-- `GET /api/online-users` - Lista online användare (autentiserad)
-- `GET /health` - Hälsokontroll (offentlig)
+- `GET /api/csrf-token` - Get CSRF token for secure requests
+- `POST /api/login` - Login with name (requires CSRF token)
+- `POST /api/logout` - Logout (requires CSRF token)
+- `GET /api/messages?offset=0&limit=10` - Get messages (paginated, authenticated)
+- `GET /api/online-users` - List online users (authenticated)
+- `GET /health` - Health check (public)
 
 ### WebSocket
-- `ws://host/ws?sessionId=xxx` - Realtidsanslutning
+- `ws://host/ws?sessionId=xxx` - Real-time connection
 
-#### WebSocket Meddelanden
+#### WebSocket Messages
 
-**Från klient:**
+**From client:**
 ```json
 {
   \"type\": \"send_message\",
@@ -170,14 +176,14 @@ Se [DEPLOYMENT.md](docs/DEPLOYMENT.md) för fullständig deploy guide.
 }
 ```
 
-**Till klient:**
+**To client:**
 ```json
 {
   \"type\": \"message\",
   \"message\": {
     \"id\": \"uuid\",
-    \"user\": \"Användarnamn\",
-    \"text\": \"Meddelande text\",
+    \"user\": \"Username\",
+    \"text\": \"Message text\",
     \"timestamp\": 1234567890
   }
 }
