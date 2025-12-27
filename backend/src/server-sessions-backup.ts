@@ -8,7 +8,6 @@ import { body, validationResult } from "express-validator";
 import winston from "winston";
 import DOMPurify from "dompurify";
 import { JSDOM } from "jsdom";
-import crypto from "crypto";
 
 import { JWTAuth } from "./jwt-auth.js";
 import { requireJWT, optionalJWT, AuthenticatedRequest } from "./jwt-middleware.js";
@@ -130,7 +129,7 @@ app.post(
       const sanitizedName = sanitizeInput(name.trim());
       
       const token = JWTAuth.generateToken({
-        userId: crypto.randomUUID(),
+        userId: require('crypto').randomUUID(),
         name: sanitizedName
       });
       

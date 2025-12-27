@@ -2,16 +2,29 @@
 
 Technical details for the Mugharred instant rooms platform.
 
-## Current Implementation (MVP Phase 1 - KRITISK STATUS)
+## Phase 1 Status: ARCHITECTURE REWRITE REQUIRED
 
-**🚨 ENDAST 10% AV PHASE 1 KLART - KREDIT-SLÖSERI**:
-- ✅ **Room Creation Modal**: Finns på landing page
-- ❌ **Room API Endpoints**: Saknas helt - backend kan ej skapa rum  
-- ❌ **Join Room Flow**: Saknas - ingen kan gå med i rum
-- ❌ **Room Timer**: Saknas - ingen countdown synlig
-- ❌ **Host Controls**: Saknas - kan ej kicka/låsa rum
-- ❌ **Room Chat**: Saknas - bara global chat finns
-- ❌ **Auto-expire**: Saknas - rum försvinner ej
+**🚨 CURRENT SESSION-BASED IMPLEMENTATION IS FUNDAMENTALLY BROKEN**
+
+**Architecture Problems:**
+- ❌ **Express Sessions** → Race conditions, timing bugs, session validation failures
+- ❌ **Memory Storage** → Rooms lost on restart, no persistence for "share link" reliability  
+- ❌ **Stateful WebSocket** → Session dependencies cause connection failures
+- ❌ **Frontend Sessions** → Broken user flows, double username inputs
+
+**ROOT CAUSE:** Session-based architecture violates MVP principles:
+- "One link = one room" → Broken (links die on restart)
+- "Enterprise-grade security" → Broken (session race conditions)  
+- "Zero friction" → Broken (session timing issues)
+
+**SOLUTION: STATELESS ARCHITECTURE REWRITE**
+All scripts ready for execution (according to goldenrules.md):
+
+1. 🔐 `scripts/implement-jwt-auth.sh` - JWT stateless authentication
+2. 🏠 `scripts/implement-redis-rooms.sh` - Redis persistent storage  
+3. 🔌 `scripts/implement-stateless-websocket.sh` - Token-based WebSocket
+4. 🎨 `scripts/implement-frontend-tokens.sh` - Frontend token management
+5. 🧪 `scripts/implement-integration-testing.sh` - Testing & deployment
 
 ### Room System Architecture (NEW)
 ```typescript

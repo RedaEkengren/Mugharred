@@ -195,49 +195,23 @@ const JoinRoomModal: React.FC<{
   );
 };
 
-// Secure API utilities for CSRF protection
+// Secure API utilities - now uses JWT from wrapper
 class SecureAPI {
-  private static csrfToken: string = '';
-
-  static async getCsrfToken(): Promise<string> {
-    if (this.csrfToken) return this.csrfToken;
-    
-    try {
-      const response = await fetch('/api/csrf-token', {
-        method: 'GET',
-        credentials: 'include',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        this.csrfToken = data.csrfToken;
-        return this.csrfToken;
-      }
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-    }
-    
-    return '';
-  }
-
   static async secureRequest(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = await this.getCsrfToken();
-    
+    // JWT token is added automatically by jwt-wrapper.ts
     const headers = {
       'Content-Type': 'application/json',
-      'X-CSRF-Token': token,
       ...options.headers,
     };
 
     return fetch(url, {
       ...options,
-      credentials: 'include',
       headers,
     });
   }
 
   static clearToken() {
-    this.csrfToken = '';
+    // JWT handled by wrapper
   }
 }
 
@@ -447,13 +421,29 @@ export default function MugharredLandingPage() {
     let reconnectAttempts = 0;
 
     function connect() {
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('mugharred_token');
+      if (!token) {
+        console.error('No JWT token found');
+        return;
+      }
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${encodeURIComponent(sessionId || '')}${currentRoomId ? `&roomId=${currentRoomId}` : ''}&timestamp=${Date.now()}`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
       const socket = new WebSocket(wsUrl);
       
       socket.onopen = () => {
         setWsConnected(true);
         reconnectAttempts = 0;
+        
+        // If we have a room, join it
+        if (currentRoomId) {
+          socket.send(JSON.stringify({
+            type: 'join_room',
+            roomId: currentRoomId
+          }));
+        }
+        
         showToast("Connected to real-time", "success");
       };
 
@@ -477,6 +467,11 @@ export default function MugharredLandingPage() {
           } else if (data.type === "online_users") {
             const sanitizedUsers = data.users.map((user: string) => DOMPurify.sanitize(user));
             setOnlineUsers(sanitizedUsers);
+          } else if (data.type === "room_event") {
+            if (data.event.type === "participants_update") {
+              const participants = data.event.participants || [];
+              setOnlineUsers(participants.map((p: any) => p.name || p));
+            }
           } else if (data.type === "error") {
             showToast(data.error, "error");
           }
@@ -520,7 +515,7 @@ export default function MugharredLandingPage() {
     connect();
   }, [sessionId, currentRoomId]);
 
-  // Connect WebSocket when sessionId changes
+  // Connect WebSocket when logged in
   useEffect(() => {
     if (sessionId) {
       connectWebSocket();
@@ -539,39 +534,9 @@ export default function MugharredLandingPage() {
   // Load initial messages
   useEffect(() => {
     if (sessionId) {
-      fetch("/api/messages?offset=0&limit=50", {
-        credentials: 'include'
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.items) {
-            const sanitizedMessages = data.items.map((msg: Message) => ({
-              ...msg,
-              text: DOMPurify.sanitize(msg.text),
-              user: DOMPurify.sanitize(msg.user),
-              sanitized: true
-            }));
-            setMessages(sanitizedMessages.reverse());
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load messages:", error);
-          showToast("Failed to load messages", "error");
-        });
-
-      fetch("/api/online-users", {
-        credentials: 'include'
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.users) {
-            const sanitizedUsers = data.users.map((user: string) => DOMPurify.sanitize(user));
-            setOnlineUsers(sanitizedUsers);
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load online users:", error);
-        });
+      // Room messages come through WebSocket, no need to fetch
+      setMessages([]);
+      setOnlineUsers([]);
     }
   }, [sessionId]);
 
@@ -590,7 +555,8 @@ export default function MugharredLandingPage() {
       }
       
       const loginData = await loginResponse.json();
-      setSessionId(loginData.sessionId);
+      // JWT token is saved by wrapper, just set logged in state
+      setSessionId(loginData.token || 'logged-in');
       setName(userName);
       
       // Update CSRF token after login
@@ -602,7 +568,8 @@ export default function MugharredLandingPage() {
         body: JSON.stringify({ 
           name: roomName,
           maxParticipants,
-          duration
+          duration,
+          hostName: userName
         }),
       });
 
@@ -637,7 +604,8 @@ export default function MugharredLandingPage() {
       }
       
       const loginData = await loginResponse.json();
-      setSessionId(loginData.sessionId);
+      // JWT token is saved by wrapper, just set logged in state
+      setSessionId(loginData.token || 'logged-in');
       setName(userName);
       
       // Update CSRF token after login

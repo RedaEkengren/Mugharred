@@ -279,6 +279,17 @@ app.post("/api/refresh-token", requireJWT, (req: AuthenticatedRequest, res: expr
   }
 });
 
+// Legacy compatibility endpoints for old frontend
+app.get("/api/messages", optionalJWT, async (req, res) => {
+  // Return empty messages for now - frontend expects this endpoint
+  res.json([]);
+});
+
+app.get("/api/online-users", optionalJWT, async (req, res) => {
+  // Return empty user list for now - frontend expects this endpoint  
+  res.json([]);
+});
+
 // Health check with statistics
 app.get("/health", async (req, res) => {
   try {

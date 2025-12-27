@@ -1,4 +1,4 @@
-// Room Management Types for MVP Implementation
+// Room Management Types for MVP Implementation with JWT Auth
 
 export interface Participant {
   sessionId: string;
@@ -11,7 +11,7 @@ export interface Participant {
 export interface Room {
   id: string;           // "quiet-sun-5821" 
   name: string;         // User-friendly room name
-  hostId: string;       // Creator sessionId
+  hostId: string;       // Creator userId (from JWT)
   maxParticipants: number; // 2-12 per MVP.md
   duration: number;     // 15/30/60/120 min per MVP.md
   createdAt: number;    // timestamp
@@ -24,11 +24,11 @@ export interface Room {
 
 export interface RoomMessage {
   id: string;
-  roomId: string;      // NEW: Messages belong to rooms
+  roomId: string;      
   user: string;
   text: string;
   timestamp: number;
-  sessionId: string;
+  sessionId: string;   // From JWT userId
 }
 
 export interface RoomSettings {
@@ -50,23 +50,14 @@ export interface JoinRoomRequest {
   participantName: string;
 }
 
-// Room ID generation (MVP.md style: "quiet-sun-5821")
+// Generate room ID in format "adjective-noun-number"
 export function generateRoomId(): string {
-  const adjectives = [
-    'quiet', 'bright', 'calm', 'swift', 'warm', 'cool', 'deep', 'wide',
-    'light', 'dark', 'soft', 'bold', 'fresh', 'clear', 'sharp', 'smooth'
-  ];
-  
-  const nouns = [
-    'sun', 'moon', 'star', 'wind', 'wave', 'fire', 'snow', 'rain',
-    'cloud', 'tree', 'rock', 'bird', 'fish', 'bear', 'wolf', 'deer'
-  ];
-  
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const adjectives = ['quiet', 'bright', 'swift', 'calm', 'wise', 'bold', 'cool', 'warm'];
+  const nouns = ['sun', 'moon', 'star', 'bird', 'tree', 'wave', 'cloud', 'wind'];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  const number = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
-  
-  return `${adjective}-${noun}-${number}`;
+  const num = Math.floor(Math.random() * 9000) + 1000;
+  return `${adj}-${noun}-${num}`;
 }
 
 // Room validation

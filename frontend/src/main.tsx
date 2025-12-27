@@ -1,3 +1,4 @@
+import "./jwt-wrapper.js";
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import MugharredLandingPage from './MugharredLandingPage.tsx'
