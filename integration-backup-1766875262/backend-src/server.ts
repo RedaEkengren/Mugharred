@@ -18,7 +18,7 @@ import { validateRoomSettings } from "./room-types.js";
 
 // Security Configuration
 const NODE_ENV = process.env.NODE_ENV || "development";
-const PORT = Number(process.env.PORT || 3010);
+const PORT = Number(process.env.PORT || 3001);
 
 // Initialize DOMPurify for server-side sanitization
 const window = new JSDOM("").window;
@@ -294,7 +294,7 @@ app.get("/api/online-users", optionalJWT, async (req, res) => {
 app.get("/health", async (req, res) => {
   try {
     const roomStats = await redisRoomService.getStats();
-    const wsStats = wsService?.getStats() || { connections: 0 };
+    const wsStats = wsService?.getStats() || { totalConnections: 0, roomConnections: {} };
     
     res.json({
       status: "ok",
@@ -303,7 +303,7 @@ app.get("/health", async (req, res) => {
       storage: "redis",
       rooms: roomStats.totalRooms,
       participants: roomStats.totalParticipants,
-      websockets: wsStats.connections
+      websockets: wsStats.totalConnections
     });
   } catch (error) {
     res.status(500).json({ 

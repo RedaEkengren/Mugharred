@@ -258,26 +258,29 @@ export default function MugharredLandingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const heartbeatInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Virtual scroll state - DISABLED for debug
-  // const [scrollTop, setScrollTop] = useState(0);
-  // const [containerHeight, setContainerHeight] = useState(0);
+  // Virtual scroll state
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
-  // Calculate visible range - DISABLED for debug, show all messages
+  // Calculate visible range
   const { visibleStartIndex, visibleEndIndex, totalHeight, offsetY } = useMemo(() => {
-    // Show ALL messages for debugging
+    const startIndex = Math.floor(scrollTop / ROW_HEIGHT);
+    const visibleCount = Math.ceil(containerHeight / ROW_HEIGHT);
+    const endIndex = Math.min(startIndex + visibleCount + 1, messages.length);
+    
     return {
-      visibleStartIndex: 0,
-      visibleEndIndex: messages.length,
+      visibleStartIndex: Math.max(0, startIndex),
+      visibleEndIndex: endIndex,
       totalHeight: messages.length * ROW_HEIGHT,
-      offsetY: 0
+      offsetY: startIndex * ROW_HEIGHT
     };
-  }, [messages.length]);
+  }, [scrollTop, containerHeight, messages.length]);
 
   const visibleMessages = messages.slice(visibleStartIndex, visibleEndIndex);
 
-  // Handle scroll - DISABLED for debug
-  const handleScroll = useCallback((_e: React.UIEvent<HTMLDivElement>) => {
-    // setScrollTop(e.currentTarget.scrollTop);
+  // Handle scroll
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
   // Check for room URL on mount
@@ -320,7 +323,7 @@ export default function MugharredLandingPage() {
   useEffect(() => {
     const updateHeight = () => {
       if (containerRef.current) {
-        // setContainerHeight(containerRef.current.clientHeight);
+        setContainerHeight(containerRef.current.clientHeight);
       }
     };
 
@@ -397,7 +400,7 @@ export default function MugharredLandingPage() {
       setMessages([]);
       setOnlineUsers([]);
       setWs(null);
-      // JWT token managed by wrapper
+      SecureAPI.clearToken();
       
       if (heartbeatInterval.current) {
         clearInterval(heartbeatInterval.current);
@@ -458,14 +461,12 @@ export default function MugharredLandingPage() {
             };
             
             setMessages(prev => {
-              console.log('📥 Adding message:', sanitizedMessage.id, sanitizedMessage.text);
-              console.log('📋 Current messages:', prev.map(m => ({id: m.id, text: m.text})));
+              const exists = prev.find(m => m.id === sanitizedMessage.id);
+              if (exists) return prev;
               return [...prev, sanitizedMessage].sort((a, b) => a.timestamp - b.timestamp);
             });
-          } else if (data.type === "participants_update") {
-            console.log("👥 Received participants_update:", data);
+          } else if (data.type === "online_users") {
             const sanitizedUsers = data.users.map((user: string) => DOMPurify.sanitize(user));
-            console.log("👥 Setting online users:", sanitizedUsers);
             setOnlineUsers(sanitizedUsers);
           } else if (data.type === "room_event") {
             if (data.event.type === "participants_update") {
@@ -560,7 +561,7 @@ export default function MugharredLandingPage() {
       setName(userName);
       
       // Update CSRF token after login
-      // JWT token managed by wrapper
+      SecureAPI.clearToken();
       
       // Now create the room with the new session
       const response = await SecureAPI.secureRequest('/api/create-room', {
@@ -609,7 +610,7 @@ export default function MugharredLandingPage() {
       setName(userName);
       
       // Update CSRF token after login
-      // JWT token managed by wrapper
+      SecureAPI.clearToken();
       
       // Now join the room
       const response = await SecureAPI.secureRequest("/api/join-room", {
@@ -640,7 +641,6 @@ export default function MugharredLandingPage() {
     
     ws.send(JSON.stringify({
       type: "send_message",
-      roomId: currentRoomId,
       text: sanitizedInput
     }));
     

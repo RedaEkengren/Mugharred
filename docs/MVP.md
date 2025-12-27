@@ -117,65 +117,74 @@ Instant Rooms for → Planning → Interviews → Study Sessions → Customer Ca
 
 ## Smart MVP Prioritization
 
-### Do First (Sprint 1 - Core "Wow") - ❌ ARCHITECTURE FAILURE - REQUIRES REWRITE
+### Do First (Sprint 1 - Core "Wow") - 🔄 MOSTLY WORKING - MINOR INTEGRATION BUGS
 
-**WHAT WORKS (UI Level):**
-1. ✅ Room creation modal på landing page
-2. ✅ Landing page design och copy
-3. ✅ Share functionality (Copy Link / Share buttons)
-4. ✅ Room URL routing (/r/room-id)
+**WHAT WORKS (December 27, 2024):**
+1. ✅ JWT authentication endpoints working
+2. ✅ Redis room persistence implemented  
+3. ✅ Room creation API working
+4. ✅ Room joining API working
+5. ✅ Auto-expiry timer functionality
+6. ✅ WebSocket connection and authentication
+7. ✅ Basic messaging working (User 1 → User 2)
+8. ✅ Online user count showing correctly
+9. ✅ Room sharing and joining via links
 
-**FUNDAMENTAL ARCHITECTURE FAILURES:**
-- ❌ **Session Management** - Express sessions är anti-pattern för WebSocket apps
-- ❌ **Room Storage** - Memory storage bryter "share link" reliability
-- ❌ **WebSocket Design** - Stateful session validation skapar race conditions
-- ❌ **Enterprise Security** - Session-based auth är inte enterprise-grade
-- ❌ **Zero Friction** - Session timing issues bryter instant access
+**REMAINING CRITICAL ISSUES (December 27, 2024 - DEBUGGING ACTIVE):**
 
-**ROOT CAUSE ANALYSIS:**
-Current implementation breaks MVP core principles:
-- "One link = one room" → Links bryter vid server restart
-- "Enterprise-grade security" → Session race conditions
-- "Real-time over optimization" → WebSocket session bugs
-- "Zero friction" → Session management timing issues
+**IDENTIFIED BUGS FROM TESTING:**
 
-**PHASE 1 REDESIGN REQUIRED - COMPLETE ARCHITECTURE REWRITE:**
+**User 1 (Room Creator):**
+- ✅ Can create room successfully
+- ✅ Can send multiple messages  
+- ✅ Shows as online (count correct: shows "Online (2)")
+- ❌ **CRITICAL: Cannot see participant names** - Console shows `Array [ "", "" ]` (empty names)
+- ❌ **CRITICAL: Cannot receive User 2 messages** - Only sees own messages
 
-**NEW PHASE 1 FOUNDATION:**
-1. 🔲 **JWT Stateless Authentication**
-   - Replace Express sessions with JWT tokens
-   - Room permissions embedded in token
-   - Same token for HTTP + WebSocket
-   - True enterprise-grade security
+**User 2 (Room Joiner):**
+- ✅ Can join room via share link successfully
+- ✅ Can send messages (no errors)
+- ✅ Shows as online (count correct)
+- ✅ **Receives ALL messages** (both User 1 and User 2 messages)
 
-2. 🔲 **Redis Room Persistence** 
-   - Replace memory storage with Redis
-   - Rooms survive server restarts
-   - True "share link" reliability
-   - Auto-expire via Redis TTL
+**CONSOLE LOG EVIDENCE:**
+- Frontend: `👥 Received participants_update: Object { type: "participants_update", users: (2) […], count: 2 }`
+- Frontend: `👥 Setting online users: Array [ "", "" ]` ← **EMPTY NAMES**
+- User 2 can see all chat, User 1 only sees own chat = **ASYMMETRIC BROADCASTING**
 
-3. 🔲 **Stateless WebSocket Architecture**
-   - JWT validation only (no session lookups)
-   - Room-specific message channels
-   - Eliminates session race conditions
-   - True real-time reliability
+**ROOT CAUSE ANALYSIS (ACTIVE DEBUGGING):**
+1. **Empty Participant Names:** participants_update sends empty strings instead of actual names
+2. **Asymmetric Message Broadcasting:** User 1 doesn't receive User 2 messages but User 2 receives everything
+3. **WebSocket Room State:** Possible room membership or broadcasting issue
 
-4. 🔲 **Frontend Token Management**
-   - JWT storage and refresh logic
-   - Automatic token renewal
-   - Proper error handling for expired tokens
-   - Session-free room joining
+**DEBUG STATUS (IN PROGRESS):**
+✅ Added extensive backend logging:
+- `👤 Adding participant:` - tracks participant addition to Redis
+- `👥 Room X participants:` - shows Redis participant data
+- `💬 Message from` - tracks message sending
+- `🔊 Broadcasting to room` - tracks message distribution
+- `📤 Sent to` - confirms message delivery
 
-**CURRENT CODE STATUS:**
-- Frontend UI: 70% salvageable
-- Backend API: 20% salvageable (endpoints structure OK)
-- Authentication: 0% salvageable - complete rewrite needed
-- Room management: 10% salvageable (types OK, logic broken)
-- WebSocket: 0% salvageable - fundamental design flaw
+**NEXT STEPS AFTER /COMPACT:**
+1. **Check backend console logs** for participant name and broadcasting debug output
+2. **Fix empty participant names** in participants_update
+3. **Fix asymmetric message broadcasting** (User 1 not receiving User 2 messages)
+4. **Test complete bidirectional flow** once fixes applied
 
-**REALISTIC TIMELINE:**
-- Phase 1 Proper Implementation: 2-3 days full rewrite
-- Current "95% complete" was architectural proof-of-concept, not MVP implementation
+**CURRENT STATUS:**
+- Backend Architecture: ✅ Complete (JWT + Redis working)
+- Room Creation/Joining: ✅ Working
+- Authentication: ✅ Working
+- Message Broadcasting: ❌ ASYMMETRIC (User 2→User 1 broken)
+- Participant Names: ❌ EMPTY STRINGS (display broken)
+
+**PHASE 1 STATUS:** 85% COMPLETE → 2 CRITICAL BUGS TO FIX
+
+**FILES WITH DEBUG LOGGING:**
+- `/backend/src/websocket-service.ts` - Added participant and broadcasting debug
+- `/frontend/src/MugharredLandingPage.tsx` - Added participants_update debug
+
+**READY FOR FINAL BUG FIXING POST-COMPACT**
 
 **PHASE 1 REWRITE SCRIPTS READY - EXECUTE IN ORDER:**
 

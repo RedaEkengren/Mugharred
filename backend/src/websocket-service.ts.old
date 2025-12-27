@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 
+// Initialize DOMPurify
 const window = new JSDOM("").window;
 const purify = DOMPurify(window as any);
 
@@ -13,7 +14,6 @@ interface WebSocketConnection {
   socket: WebSocket;
   user: JWTPayload;
   lastActivity: number;
-  currentRoomId?: string;
 }
 
 export class StatelessWebSocketService {
@@ -33,6 +33,7 @@ export class StatelessWebSocketService {
 
   private handleConnection(socket: WebSocket, req: IncomingMessage) {
     try {
+      // Extract and validate JWT token
       const token = this.extractToken(req);
       if (!token) {
         this.rejectConnection(socket, "No token provided");
@@ -42,11 +43,11 @@ export class StatelessWebSocketService {
       const user = JWTAuth.verifyToken(token);
       const connectionId = randomUUID();
 
+      // Store connection
       const connection: WebSocketConnection = {
         socket,
         user,
-        lastActivity: Date.now(),
-        currentRoomId: user.roomId
+        lastActivity: Date.now()
       };
       
       this.connections.set(connectionId, connection);
@@ -58,10 +59,16 @@ export class StatelessWebSocketService {
         connectionId
       });
 
+      // Subscribe to room if user is in a room
+      if (user.roomId) {
+        this.subscribeToRoom(connectionId, user.roomId);
+      }
+
       // Set up message handler
       socket.on("message", (raw) => this.handleMessage(connectionId, raw));
       
-      socket.on("close", (code, reason) => {
+      // Set up close handler  
+      socket.on("close", async (code, reason) => {
         console.log(`🔌 WebSocket disconnected:`, { 
           userId: user.userId,
           connectionId,
@@ -69,13 +76,17 @@ export class StatelessWebSocketService {
           reason: reason?.toString() 
         });
         
-        const conn = this.connections.get(connectionId);
-        if (conn?.currentRoomId) {
-          this.leaveRoomCleanup(connectionId, conn.currentRoomId);
+        const connection = this.connections.get(connectionId);
+        if (connection?.user.roomId) {
+          // User was in a room, handle leaving
+          await redisRoomService.leaveRoom(connection.user.roomId, connection.user.userId);
+          await this.sendParticipantsUpdate(connection.user.roomId);
         }
+        
         this.connections.delete(connectionId);
       });
 
+      // Set up error handler
       socket.on("error", (error) => {
         console.error(`🔌 WebSocket error:`, { 
           userId: user.userId,
@@ -84,12 +95,6 @@ export class StatelessWebSocketService {
         });
         this.connections.delete(connectionId);
       });
-
-      // If user has roomId in JWT, automatically join WebSocket room
-      if (user.roomId) {
-        console.log(`🏠 Auto-joining room ${user.roomId} for JWT user ${user.name}`);
-        this.handleJoinRoom(connectionId, { roomId: user.roomId, name: user.name });
-      }
 
       // Send connection confirmation
       this.sendToConnection(connectionId, {
@@ -124,14 +129,7 @@ export class StatelessWebSocketService {
       connection.lastActivity = Date.now();
       const msg = JSON.parse(raw.toString());
 
-      console.log(`📨 WebSocket message:`, { 
-        connectionId, 
-        type: msg.type,
-        user: connection.user.name 
-      });
-
       switch (msg.type) {
-        case "heartbeat":
         case "ping":
           this.sendToConnection(connectionId, { type: "pong" });
           break;
@@ -169,8 +167,8 @@ export class StatelessWebSocketService {
     if (!connection) return;
 
     const { user } = connection;
-    console.log(`💬 Message from ${user.name} (${user.userId}) in room ${connection.currentRoomId || msg.roomId}`);
     
+    // Validate message
     const text = String(msg.text || "").trim();
     if (!text || text.length > 500) {
       this.sendToConnection(connectionId, {
@@ -180,9 +178,10 @@ export class StatelessWebSocketService {
       return;
     }
 
-    // Use current room or message roomId
-    const roomId = connection.currentRoomId || msg.roomId;
+    // Use roomId from message if user is not in a room via token
+    const roomId = user.roomId || msg.roomId;
     
+    // Must be in a room to send messages
     if (!roomId) {
       this.sendToConnection(connectionId, {
         type: "error",
@@ -191,27 +190,21 @@ export class StatelessWebSocketService {
       return;
     }
 
+    // Sanitize message
     const sanitizedText = purify.sanitize(text, { ALLOWED_TAGS: [] });
 
+    // Create room message
     const roomMessage = {
       id: randomUUID(),
+      roomId: roomId,
       user: user.name,
       text: sanitizedText,
       timestamp: Date.now(),
-      sanitized: true
+      sessionId: user.userId
     };
 
-    // Broadcast to all room participants
-    await this.broadcastToRoom(roomId, {
-      type: "message",
-      message: roomMessage
-    });
-
-    await redisRoomService.addMessage(roomId, {
-      ...roomMessage,
-      roomId,
-      sessionId: user.userId
-    });
+    // Add to room storage and broadcast via Redis pub/sub
+    await redisRoomService.addMessage(roomId, roomMessage);
 
     console.log(`💬 Message sent to room ${roomId} by ${user.name}`);
   }
@@ -224,42 +217,50 @@ export class StatelessWebSocketService {
       const { roomId, name } = msg;
       const { user } = connection;
 
-      console.log(`🚪 Joining room:`, { roomId, name, userId: user.userId });
+      // Join room via Redis service
+      const result = await redisRoomService.joinRoom(
+        { roomId, participantName: name },
+        user.userId
+      );
 
-      // Check if room exists
-      const roomExists = await redisRoomService.roomExists(roomId);
-      if (!roomExists) {
+      if (!result.success) {
         this.sendToConnection(connectionId, {
-          type: "error",
-          error: "Room not found"
+          type: "join_room_error",
+          error: result.error
         });
         return;
       }
 
-      // Update connection room
-      connection.currentRoomId = roomId;
-
-      // Add to room participants
-      const participantName = name || user.name;
-      console.log(`👤 Adding participant: userId=${user.userId}, name=${participantName} to room ${roomId}`);
-      await redisRoomService.addParticipant(roomId, user.userId, participantName);
-
-      // Confirm room join
-      this.sendToConnection(connectionId, {
-        type: "joined_room",
+      // Update user token with room info
+      const newToken = JWTAuth.generateToken({
+        userId: user.userId,
+        name: name,
         roomId: roomId,
-        success: true
+        role: 'participant'
       });
 
-      // Send participants update to all room members
-      await this.sendParticipantsUpdate(roomId);
+      // Subscribe to room messages
+      this.subscribeToRoom(connectionId, roomId);
 
-      console.log(`✅ User ${user.name} joined room ${roomId}`);
+      // Update connection user info
+      connection.user.roomId = roomId;
+      connection.user.name = name;
+      connection.user.role = 'participant';
+
+      this.sendToConnection(connectionId, {
+        type: "joined_room",
+        roomId,
+        token: newToken,
+        room: result.room
+      });
+
+      // Send updated participants list to all users in room
+      await this.sendParticipantsUpdate(roomId);
 
     } catch (error) {
       console.error("Join room error:", error);
       this.sendToConnection(connectionId, {
-        type: "error",
+        type: "join_room_error",
         error: "Failed to join room"
       });
     }
@@ -267,87 +268,134 @@ export class StatelessWebSocketService {
 
   private async handleLeaveRoom(connectionId: string) {
     const connection = this.connections.get(connectionId);
-    if (!connection || !connection.currentRoomId) return;
+    if (!connection || !connection.user.roomId) return;
 
-    await this.leaveRoomCleanup(connectionId, connection.currentRoomId);
+    const { user } = connection;
+    const roomId = user.roomId!;
+    
+    await redisRoomService.leaveRoom(roomId, user.userId);
+    
+    // Update user token without room info
+    const newToken = JWTAuth.generateToken({
+      userId: user.userId,
+      name: user.name
+    });
+
+    connection.user.roomId = undefined;
+    connection.user.role = undefined;
+
+    this.sendToConnection(connectionId, {
+      type: "left_room",
+      token: newToken
+    });
+
+    // Send updated participants list to remaining users in room
+    await this.sendParticipantsUpdate(roomId);
   }
 
-  private async leaveRoomCleanup(connectionId: string, roomId: string) {
+  private async subscribeToRoom(connectionId: string, roomId: string) {
+    // Subscribe to room messages
+    redisRoomService.subscribeToRoom(roomId, (message) => {
+      this.sendToConnection(connectionId, {
+        type: "message",
+        message
+      });
+    });
+
+    // Subscribe to room events
+    redisRoomService.subscribeToRoomEvents(roomId, async (event) => {
+      this.sendToConnection(connectionId, {
+        type: "room_event",
+        event
+      });
+
+      // Send participants update when users join or leave
+      if (event.type === 'user_joined' || event.type === 'user_left') {
+        await this.sendParticipantsUpdate(roomId);
+      }
+    });
+
+    // Send initial participants list when subscribing
+    await this.sendParticipantsUpdate(roomId);
+  }
+
+  private sendToConnection(connectionId: string, data: any) {
     const connection = this.connections.get(connectionId);
-    if (!connection) return;
+    if (!connection || connection.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
 
     try {
-      await redisRoomService.removeParticipant(roomId, connection.user.userId);
-      connection.currentRoomId = undefined;
-      
-      await this.sendParticipantsUpdate(roomId);
-      
-      console.log(`👋 User ${connection.user.name} left room ${roomId}`);
+      connection.socket.send(JSON.stringify(data));
     } catch (error) {
-      console.error("Leave room cleanup error:", error);
+      console.error("Failed to send to connection:", { connectionId, error });
+      this.connections.delete(connectionId);
     }
   }
 
   private async sendParticipantsUpdate(roomId: string) {
     try {
-      const participants = await redisRoomService.getRoomParticipants(roomId);
-      console.log(`👥 Room ${roomId} participants:`, participants);
-      
-      const userNames = participants.map(p => p.name);
-      console.log(`👥 Participant names:`, userNames);
-      
-      await this.broadcastToRoom(roomId, {
-        type: "participants_update",
-        users: userNames,
-        count: participants.length
-      });
-    } catch (error) {
-      console.error("Send participants update error:", error);
-    }
-  }
+      const room = await redisRoomService.getRoom(roomId);
+      if (!room) return;
 
-  private async broadcastToRoom(roomId: string, message: any) {
-    console.log(`🔊 Broadcasting to room ${roomId}:`, message.type);
-    let broadcastCount = 0;
-    
-    for (const [connId, connection] of this.connections.entries()) {
-      console.log(`🔍 Connection ${connId}: roomId=${connection.currentRoomId}, user=${connection.user.name}`);
-      if (connection.currentRoomId === roomId && connection.socket.readyState === WebSocket.OPEN) {
-        this.sendToConnection(connId, message);
-        broadcastCount++;
-        console.log(`📤 Sent to ${connection.user.name}`);
+      const participants = Array.from(room.participants.values()).map(p => p.name);
+      
+      // Send to all connections in this room
+      for (const [connectionId, connection] of this.connections) {
+        if (connection.user.roomId === roomId) {
+          this.sendToConnection(connectionId, {
+            type: "participants_update",
+            users: participants
+          });
+        }
       }
+
+      console.log(`👥 Sent participants update for room ${roomId}: ${participants.join(', ')}`);
+    } catch (error) {
+      console.error("Failed to send participants update:", error);
     }
-    
-    console.log(`✅ Broadcast complete: ${broadcastCount} recipients`);
   }
 
-  private sendToConnection(connectionId: string, message: any) {
-    const connection = this.connections.get(connectionId);
-    if (connection && connection.socket.readyState === WebSocket.OPEN) {
-      connection.socket.send(JSON.stringify(message));
+  private sendToRoom(roomId: string, data: any, excludeUserId?: string) {
+    for (const [connectionId, connection] of this.connections) {
+      if (connection.user.roomId === roomId && 
+          connection.user.userId !== excludeUserId) {
+        this.sendToConnection(connectionId, data);
+      }
     }
   }
 
   private setupCleanupInterval() {
+    // Clean up inactive connections every minute
     setInterval(() => {
       const now = Date.now();
-      for (const [connId, connection] of this.connections.entries()) {
-        if (now - connection.lastActivity > 300000) { // 5 minutes
-          connection.socket.close();
-          this.connections.delete(connId);
+      const timeout = 5 * 60 * 1000; // 5 minutes
+
+      for (const [connectionId, connection] of this.connections) {
+        if (now - connection.lastActivity > timeout) {
+          console.log(`🧹 Cleaning up inactive connection: ${connectionId}`);
+          connection.socket.close(1000, "Inactive connection");
+          this.connections.delete(connectionId);
         }
       }
-    }, 60000); // Check every minute
+    }, 60_000);
   }
 
-  public getConnectionCount(): number {
-    return this.connections.size;
-  }
+  // Get connection statistics
+  getStats() {
+    const totalConnections = this.connections.size;
+    const roomConnections = new Map<string, number>();
 
-  public getStats() {
+    for (const connection of this.connections.values()) {
+      if (connection.user.roomId) {
+        const count = roomConnections.get(connection.user.roomId) || 0;
+        roomConnections.set(connection.user.roomId, count + 1);
+      }
+    }
+
     return {
-      connections: this.connections.size
+      totalConnections,
+      roomConnections: Object.fromEntries(roomConnections)
     };
   }
 }
