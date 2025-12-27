@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { 
   ArrowRight, Shield, Zap, Users, Globe2, Send, X, 
-  CheckCircle2, AlertCircle, Loader2, LogOut, Eye, Share2, Copy
+  CheckCircle2, AlertCircle, Loader2, LogOut, Eye
 } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -13,27 +13,53 @@ type Message = {
   sanitized?: boolean;
 };
 
+
 const ROW_HEIGHT = 88;
 const ANIMATION_DELAY_UNIT = 0.1;
 
 // Room Creation Form Component
 const CreateRoomForm: React.FC<{
-  onCreateRoom: (userName: string, roomName: string, maxParticipants: number, duration: number) => Promise<void>;
+  onCreateRoom: (roomName: string, maxParticipants: number, duration: number) => Promise<void>;
   onCancel: () => void;
 }> = ({ onCreateRoom, onCancel }) => {
   const [roomName, setRoomName] = useState('');
-  const [userName, setUserName] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(4);
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
+  // Room preview functionality
+  const [roomPreview, setRoomPreview] = useState(null);
+  
+  const loadRoomPreview = async (roomId) => {
+    try {
+      const response = await fetch(`/api/room/${roomId}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const room = await response.json();
+        setRoomPreview(room);
+      }
+    } catch (error) {
+      console.error('Failed to load room preview:', error);
+    }
+  };
+  
+  // Load room preview if we're on a room URL
+  useEffect(() => {
+    const path = window.location.pathname;
+    const roomMatch = path.match(/^/r/([a-z0-9-]+)$/);
+    if (roomMatch) {
+      loadRoomPreview(roomMatch[1]);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (roomName.trim().length < 2 || userName.trim().length < 2) return;
+    if (roomName.trim().length < 2) return;
     
     setLoading(true);
     try {
-      await onCreateRoom(userName.trim(), roomName.trim(), maxParticipants, duration);
+      await onCreateRoom(roomName.trim(), maxParticipants, duration);
     } finally {
       setLoading(false);
     }
@@ -41,21 +67,6 @@ const CreateRoomForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Your Name
-        </label>
-        <input
-          type="text"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-          placeholder="Enter your name..."
-          required
-          minLength={2}
-          maxLength={50}
-        />
-      </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Room Name
@@ -117,81 +128,13 @@ const CreateRoomForm: React.FC<{
         </button>
         <button
           type="submit"
-          disabled={loading || userName.trim().length < 2 || roomName.trim().length < 2}
+          disabled={loading || roomName.trim().length < 2}
           className="flex-1 px-4 py-2 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-lg hover:from-emerald-700 hover:to-green-800 disabled:opacity-50 font-medium"
         >
           {loading ? 'Creating...' : 'Create Room'}
         </button>
       </div>
     </form>
-  );
-};
-
-// Join Room Modal Component
-const JoinRoomModal: React.FC<{
-  roomId: string;
-  onJoin: (userName: string) => Promise<void>;
-  onCancel: () => void;
-}> = ({ roomId, onJoin, onCancel }) => {
-  const [userName, setUserName] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (userName.trim().length < 2) return;
-    
-    setLoading(true);
-    try {
-      await onJoin(userName.trim());
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Join Room</h2>
-        <p className="text-gray-600 mb-6">Room ID: {roomId}</p>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Enter your name..."
-              required
-              minLength={2}
-              maxLength={50}
-              autoFocus
-            />
-          </div>
-          
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 bg-emerald-500 text-white px-4 py-2 rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading || userName.trim().length < 2}
-            >
-              {loading ? 'Joining...' : 'Join Room'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 };
 
@@ -242,14 +185,12 @@ class SecureAPI {
 }
 
 export default function MugharredLandingPage() {
-  // Core state
+  // Login state
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [name, setName] = useState("");
   
-  // Modal states
+  // Room creation modal state
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
-  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
   
   // Rotating text for hero section
   const rotatingTexts = [
@@ -267,10 +208,20 @@ export default function MugharredLandingPage() {
   
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   
-  // Legal modal state
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prev) => (prev + 1) % rotatingTexts.length);
+    }, 2500);
+    
+    return () => clearInterval(interval);
+  }, [rotatingTexts.length]);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  
+  // Modal state for legal pages
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'about' | null>(null);
   
-  // Chat state
+  // Feed state
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
@@ -309,42 +260,6 @@ export default function MugharredLandingPage() {
     setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
-  // Check for room URL on mount
-  useEffect(() => {
-    const path = window.location.pathname;
-    const roomMatch = path.match(/^\/r\/([a-z0-9-]+)$/);
-    
-    if (roomMatch) {
-      const roomId = roomMatch[1];
-      console.log("Detected room URL:", roomId);
-      setCurrentRoomId(roomId);
-      
-      // If not logged in, show join modal
-      if (!sessionId) {
-        setShowJoinRoomModal(true);
-      }
-    }
-  }, [sessionId]);
-  
-  // Update URL when room changes (for sharing)
-  useEffect(() => {
-    if (currentRoomId && sessionId) {
-      const newUrl = `/r/${currentRoomId}`;
-      if (window.location.pathname !== newUrl) {
-        window.history.pushState(null, '', newUrl);
-      }
-    }
-  }, [currentRoomId, sessionId]);
-
-  // Rotating text animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTextIndex((prev) => (prev + 1) % rotatingTexts.length);
-    }, 2500);
-    
-    return () => clearInterval(interval);
-  }, [rotatingTexts.length]);
-
   // Update container height on resize
   useEffect(() => {
     const updateHeight = () => {
@@ -376,44 +291,6 @@ export default function MugharredLandingPage() {
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
-
-  const copyRoomLink = async () => {
-    if (!currentRoomId) return;
-    
-    const roomUrl = `${window.location.origin}/r/${currentRoomId}`;
-    
-    try {
-      await navigator.clipboard.writeText(roomUrl);
-      showToast("Room link copied to clipboard!", "success");
-    } catch (error) {
-      console.error("Failed to copy:", error);
-      showToast("Failed to copy link", "error");
-    }
-  };
-
-  const shareRoom = async () => {
-    if (!currentRoomId) return;
-    
-    const roomUrl = `${window.location.origin}/r/${currentRoomId}`;
-    const shareData = {
-      title: 'Join my Mugharred room',
-      text: `Join me in this instant room for a quick chat!`,
-      url: roomUrl
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        // Fallback to copy
-        await copyRoomLink();
-      }
-    } catch (error) {
-      console.error("Share failed:", error);
-      // Fallback to copy
-      await copyRoomLink();
-    }
   };
 
   const handleLogout = async () => {
@@ -448,7 +325,7 @@ export default function MugharredLandingPage() {
 
     function connect() {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${encodeURIComponent(sessionId || '')}${currentRoomId ? `&roomId=${currentRoomId}` : ''}&timestamp=${Date.now()}`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?sessionId=${encodeURIComponent(sessionId || '')}&timestamp=${Date.now()}`;
       const socket = new WebSocket(wsUrl);
       
       socket.onopen = () => {
@@ -479,6 +356,8 @@ export default function MugharredLandingPage() {
             setOnlineUsers(sanitizedUsers);
           } else if (data.type === "error") {
             showToast(data.error, "error");
+          } else if (data.type === "pong") {
+            // Heartbeat response
           }
         } catch (error) {
           console.error("WebSocket message error:", error);
@@ -518,7 +397,7 @@ export default function MugharredLandingPage() {
     }
 
     connect();
-  }, [sessionId, currentRoomId]);
+  }, [sessionId]);
 
   // Connect WebSocket when sessionId changes
   useEffect(() => {
@@ -575,28 +454,41 @@ export default function MugharredLandingPage() {
     }
   }, [sessionId]);
 
-  const handleCreateRoom = async (userName: string, roomName: string, maxParticipants: number, duration: number) => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setLoginLoading(true);
+    setLoginError(null);
+
     try {
-      // First login the user
-      const loginResponse = await SecureAPI.secureRequest("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ name: userName }),
+      const sanitizedName = DOMPurify.sanitize(name.trim());
+      const response = await SecureAPI.secureRequest('/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ name: sanitizedName }),
       });
-      
-      if (!loginResponse.ok) {
-        const errorData = await loginResponse.json();
-        showToast(errorData.error || "Failed to login", "error");
-        return;
+
+      if (response.ok) {
+        const data = await response.json();
+        setSessionId(data.sessionId);
+        setName(sanitizedName);
+        showToast(`Welcome ${sanitizedName}!`, "success");
+      } else {
+        const data = await response.json();
+        setLoginError(data.error || "Login failed");
+        showToast(data.error || "Login failed", "error");
       }
-      
-      const loginData = await loginResponse.json();
-      setSessionId(loginData.sessionId);
-      setName(userName);
-      
-      // Update CSRF token after login
-      SecureAPI.clearToken();
-      
-      // Now create the room with the new session
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError("Network error. Please try again.");
+      showToast("Network error. Please try again.", "error");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleCreateRoom = async (roomName: string, maxParticipants: number, duration: number) => {
+    try {
       const response = await SecureAPI.secureRequest('/api/create-room', {
         method: 'POST',
         body: JSON.stringify({ 
@@ -608,60 +500,12 @@ export default function MugharredLandingPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setShowCreateRoomModal(false);
-        setCurrentRoomId(data.roomId);
-        showToast("Room created successfully!", "success");
-        // Don't redirect - user is already logged in and should see chat
+        window.location.href = `/r/${data.roomId}`;
       } else {
-        const errorData = await response.json();
-        showToast(errorData.error || "Failed to create room", "error");
+        showToast("Failed to create room", "error");
       }
     } catch (error) {
-      console.error("Room creation error:", error);
       showToast("Network error creating room", "error");
-    }
-  };
-
-  const handleJoinRoom = async (userName: string) => {
-    try {
-      // First login the user
-      const loginResponse = await SecureAPI.secureRequest("/api/login", {
-        method: "POST",
-        body: JSON.stringify({ name: userName }),
-      });
-      
-      if (!loginResponse.ok) {
-        const errorData = await loginResponse.json();
-        showToast(errorData.error || "Failed to login", "error");
-        return;
-      }
-      
-      const loginData = await loginResponse.json();
-      setSessionId(loginData.sessionId);
-      setName(userName);
-      
-      // Update CSRF token after login
-      SecureAPI.clearToken();
-      
-      // Now join the room
-      const response = await SecureAPI.secureRequest("/api/join-room", {
-        method: "POST",
-        body: JSON.stringify({ 
-          roomId: currentRoomId,
-          name: userName 
-        }),
-      });
-      
-      if (response.ok) {
-        setShowJoinRoomModal(false);
-        showToast("Joined room successfully!", "success");
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || "Failed to join room", "error");
-      }
-    } catch (error) {
-      console.error("Join room error:", error);
-      showToast("Network error joining room", "error");
     }
   };
 
@@ -709,8 +553,7 @@ export default function MugharredLandingPage() {
     </div>
   );
 
-  // Show landing page if not logged in and not on room URL
-  if (!sessionId && !currentRoomId) {
+  if (!sessionId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-yellow-50">
         {toast && (
@@ -757,13 +600,36 @@ export default function MugharredLandingPage() {
               
               {/* CTA Form directly in hero */}
               <div className="max-w-md mx-auto">
-                <button
-                  onClick={() => setShowCreateRoomModal(true)}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center gap-2 text-lg shadow-xl hover:shadow-2xl"
-                >
-                  Create Instant Room
-                  <ArrowRight size={20} />
-                </button>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name..."
+                      className="w-full px-6 py-4 text-lg rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white/90 backdrop-blur-sm shadow-lg"
+                      required
+                      minLength={2}
+                      maxLength={50}
+                      disabled={loginLoading}
+                    />
+                  </div>
+                  
+                  {loginError && (
+                    <div className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                      {loginError}
+                    </div>
+                  )}
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateRoomModal(true)}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg shadow-xl hover:shadow-2xl"
+                  >
+                    Create Room
+                    <ArrowRight size={20} />
+                  </button>
+                </form>
                 <p className="text-sm text-gray-500 mt-4">
                   Ready in 10 seconds
                 </p>
@@ -771,6 +637,7 @@ export default function MugharredLandingPage() {
             </div>
           </div>
         </header>
+
 
         {/* Features */}
         <section className="py-16 bg-white/50 backdrop-blur-sm">
@@ -812,6 +679,7 @@ export default function MugharredLandingPage() {
         <footer className="py-16 bg-white/80 backdrop-blur-sm border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
+              {/* Tagline */}
               <div className="mb-8">
                 <p className="text-lg text-gray-700 font-medium mb-2">
                   Privacy-first instant rooms for any conversation
@@ -822,6 +690,7 @@ export default function MugharredLandingPage() {
                 </div>
               </div>
               
+              {/* Links */}
               <div className="flex flex-wrap items-center justify-center gap-6 mb-8 text-sm">
                 <button 
                   onClick={() => setActiveModal('privacy')}
@@ -845,6 +714,7 @@ export default function MugharredLandingPage() {
                 </button>
               </div>
               
+              {/* Copyright */}
               <div className="border-t border-gray-200 pt-8">
                 <p className="text-sm text-gray-500">
                   © 2025 Mugharred. Built with ❤️ for instant human connection.
@@ -868,7 +738,7 @@ export default function MugharredLandingPage() {
           </div>
         )}
 
-        {/* Legal Modals - Shortened for space */}
+        {/* Legal Modals */}
         {activeModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
@@ -886,9 +756,115 @@ export default function MugharredLandingPage() {
                 </button>
               </div>
               <div className="p-6 overflow-auto max-h-[60vh]">
-                <div className="prose prose-emerald max-w-none">
-                  <p>Content for {activeModal} modal...</p>
-                </div>
+                {activeModal === 'privacy' && (
+                  <div className="prose prose-emerald max-w-none">
+                    <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 mb-6">
+                      <p className="font-medium">Effective Date: December 27, 2025</p>
+                    </div>
+                    
+                    <h3>Our Commitment to Privacy</h3>
+                    <p>Mugharred is built on the principle of privacy-first instant rooms. We collect minimal data, store nothing permanently, and never sell your information.</p>
+                    
+                    <h3>What We Collect</h3>
+                    <p>When you use Mugharred, we temporarily collect:</p>
+                    <ul>
+                      <li><strong>Display Name:</strong> The name you choose to appear in rooms</li>
+                      <li><strong>Session Data:</strong> Temporary session identifier for room participation</li>
+                      <li><strong>Messages:</strong> Chat messages during active room sessions</li>
+                      <li><strong>Connection Info:</strong> IP address for rate limiting and abuse prevention</li>
+                    </ul>
+                    
+                    <h3>What We Don't Collect</h3>
+                    <ul>
+                      <li>Email addresses or personal information</li>
+                      <li>Permanent user accounts or profiles</li>
+                      <li>Browsing history or tracking cookies</li>
+                      <li>Voice or video recordings</li>
+                      <li>Message history after rooms expire</li>
+                    </ul>
+                    
+                    <h3>Data Retention</h3>
+                    <p><strong>Temporary by Design:</strong> All room data is automatically deleted when the room timer expires, all participants leave, or after 5 minutes of inactivity.</p>
+                    
+                    <h3>Contact Us</h3>
+                    <p>Questions about this privacy policy? Contact us at: <strong>privacy@mugharred.se</strong></p>
+                  </div>
+                )}
+                
+                {activeModal === 'terms' && (
+                  <div className="prose prose-emerald max-w-none">
+                    <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 mb-6">
+                      <p className="font-medium">Effective Date: December 27, 2025</p>
+                    </div>
+                    
+                    <h3>Welcome to Mugharred</h3>
+                    <p>These Terms of Service govern your use of Mugharred, the privacy-first instant rooms platform. By using our service, you agree to these terms.</p>
+                    
+                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6">
+                      <p><strong>Key Principle:</strong> Mugharred is designed for temporary, respectful human communication. Rooms expire automatically, and we expect all users to treat each other with dignity.</p>
+                    </div>
+                    
+                    <h3>User Responsibilities</h3>
+                    <p>When using Mugharred, you agree to:</p>
+                    <ul>
+                      <li>Treat all participants with respect and dignity</li>
+                      <li>Not share illegal, harmful, or inappropriate content</li>
+                      <li>Not attempt to circumvent rate limits or abuse the service</li>
+                      <li>Respect others' privacy and not record conversations without consent</li>
+                    </ul>
+                    
+                    <h3>Prohibited Activities</h3>
+                    <ul>
+                      <li>Harassment, bullying, or threatening behavior</li>
+                      <li>Sharing illegal content or coordinating illegal activities</li>
+                      <li>Attempting to hack, spam, or disrupt the service</li>
+                      <li>Using the service for commercial advertising without permission</li>
+                    </ul>
+                    
+                    <h3>Contact and Support</h3>
+                    <p>Questions about these terms? Contact us at: <strong>support@mugharred.se</strong></p>
+                  </div>
+                )}
+                
+                {activeModal === 'about' && (
+                  <div className="prose prose-emerald max-w-none">
+                    <h3>The Vision</h3>
+                    <p>Mugharred is built on a simple belief: <strong>digital communication should be human-first, not platform-first.</strong></p>
+                    
+                    <div className="bg-emerald-50 border-l-4 border-emerald-400 p-4 my-6 italic text-lg">
+                      "We don't need another social media platform. We need digital infrastructure that gets out of the way and lets humans be human."
+                    </div>
+                    
+                    <p>That's why Mugharred works like a park bench - you use it when you need it, then you leave. No feeds to check, no profiles to maintain, no permanent digital footprint to worry about.</p>
+                    
+                    <h3>Why "Instant Rooms"?</h3>
+                    <p>Traditional platforms focus on building communities around content. We focus on building <strong>temporary spaces around conversations.</strong></p>
+                    
+                    <ul>
+                      <li><strong>Instant:</strong> No setup, no accounts, just create and share a link</li>
+                      <li><strong>Rooms:</strong> Focused spaces for specific conversations</li>
+                      <li><strong>Temporary:</strong> Everything disappears when you're done</li>
+                      <li><strong>Private:</strong> No tracking, no ads, no permanent records</li>
+                    </ul>
+                    
+                    <h3>Built for Everyone</h3>
+                    <p>Mugharred isn't targeted at a specific demographic. It's infrastructure that adapts to whatever you need: team meetings, job interviews, study groups, family calls, gaming sessions, and more.</p>
+                    
+                    <h3>What We Don't Do</h3>
+                    <ul>
+                      <li>❌ No advertising or user tracking</li>
+                      <li>❌ No algorithmic feeds or recommendations</li>
+                      <li>❌ No permanent user profiles</li>
+                      <li>❌ No addictive engagement mechanics</li>
+                    </ul>
+                    
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
+                      <h4 className="font-medium text-yellow-800 mb-2">Built By</h4>
+                      <p className="text-yellow-700">Mugharred is developed by the team at <a href="https://benbo.se" className="font-medium underline" target="_blank" rel="noopener noreferrer">benbo.se</a> - focused on ethical technology and user-centric design.</p>
+                      <p className="text-yellow-700 mt-2"><strong>Contact:</strong> hello@mugharred.se</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -897,7 +873,7 @@ export default function MugharredLandingPage() {
     );
   }
 
-  // Chat interface for logged in users OR room URLs
+  // Chat interface for logged in users
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-yellow-50">
       {toast && (
@@ -905,18 +881,6 @@ export default function MugharredLandingPage() {
           message={toast.message} 
           type={toast.type} 
           onClose={() => setToast(null)} 
-        />
-      )}
-
-      {/* Join Room Modal */}
-      {showJoinRoomModal && currentRoomId && (
-        <JoinRoomModal
-          roomId={currentRoomId}
-          onJoin={handleJoinRoom}
-          onCancel={() => {
-            setShowJoinRoomModal(false);
-            window.location.href = "/";
-          }}
         />
       )}
 
@@ -931,9 +895,7 @@ export default function MugharredLandingPage() {
                 className="h-10 w-auto rounded-xl shadow-lg ring-2 ring-white/50 hover:ring-emerald-300/50 transition-all duration-300"
               />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {currentRoomId ? `Room: ${currentRoomId}` : "Mugharred"}
-                </h1>
+                <h1 className="text-xl font-bold text-gray-900">Mugharred</h1>
                 <p className="text-sm text-gray-600">Welcome {name}</p>
               </div>
             </div>
@@ -945,29 +907,6 @@ export default function MugharredLandingPage() {
                   {wsConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
-              
-              {/* Share buttons - only show if in room */}
-              {currentRoomId && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={copyRoomLink}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                    title="Copy room link"
-                  >
-                    <Copy size={16} />
-                    Copy Link
-                  </button>
-                  
-                  <button
-                    onClick={shareRoom}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                    title="Share room"
-                  >
-                    <Share2 size={16} />
-                    Share
-                  </button>
-                </div>
-              )}
               
               <button
                 onClick={handleLogout}
@@ -988,7 +927,7 @@ export default function MugharredLandingPage() {
             <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Users size={20} className="text-emerald-600" />
-                Online ({onlineUsers.length})
+                Online ({onlineUsers.length}/5)
               </h2>
               <div className="space-y-3">
                 {onlineUsers.map((user, index) => (
@@ -1121,4 +1060,4 @@ export default function MugharredLandingPage() {
       )}
     </div>
   );
-}
+}// Build timestamp: Sat Dec 13 19:32:23 UTC 2025

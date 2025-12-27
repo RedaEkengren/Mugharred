@@ -8,7 +8,7 @@ Privacy-first instant rooms platform. Create temporary rooms for any conversatio
 
 ## Overview
 
-Mugharred is a single-page application for real-time communication. Currently implemented as open chat with plans to become instant rooms platform. Features minimalist login (name only), limited to 5 concurrent users, with automatic logout after 5 minutes of inactivity.
+Mugharred is transitioning from basic chat to instant rooms platform. **CURRENT STATUS**: Only 10% of Phase 1 complete - just room creation UI exists. Missing: API endpoints, join flow, timer, host controls, room chat. Credits wasted on incomplete work. Next: Follow goldenrules.md workflow strictly.
 
 ### Features
 

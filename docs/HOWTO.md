@@ -6,14 +6,25 @@ Practical guide for common tasks in the Mugharred project.
 
 This is your guide for working with the live Mugharred installation.
 
-## 🌍 Latest Update (2025-12-27)
+## 🚨 KRITISK STATUS (2025-12-27) - KREDIT SLÖSERI STOPP
 
-**Global English Interface & Legal Page Modals Implemented:**
-- ✅ **Feature**: Complete English translation for worldwide usage
-- ✅ **Legal Pages**: Privacy, Terms, About now work as React modals instead of broken HTML files
-- ✅ **Footer**: Professional footer with working benbo.se legal connections
-- ✅ **Compliance**: Fixed Golden Rules violations by removing unauthorized HTML files
-- ✅ **Testing**: All modal functionality verified and working correctly
+**PROBLEM**: Följde inte MVP.md korrekt - endast 10% av Phase 1 klart
+
+**VAD SOM GJORTS (LITE):**
+- ✅ Room creation modal på landing page
+- ✅ Backend room foundation filer (men ej integrerade)
+
+**VAD SOM SAKNAS (MEST AV PHASE 1):**
+- ❌ Room API endpoints - backend kan ej skapa rum
+- ❌ Join room flow - ingen kan gå med i rum  
+- ❌ Room timer countdown - inget synligt slutdatum
+- ❌ Host controls - ingen kan kicka/låsa rum
+- ❌ Room-specific chat - bara global chat finns
+
+**EFTER /COMPACT - STRIKT GOLDENRULES.MD WORKFLOW:**
+1. INVENTORY (läs exakt vad som finns)
+2. PLAN (enligt MVP.md Phase 1 krav) 
+3. EXECUTE (script-driven bara)
 
 ## Utveckling
 

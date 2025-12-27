@@ -19,9 +19,6 @@ import jwt from "jsonwebtoken";
 import DOMPurify from "dompurify";
 import { JSDOM } from "jsdom";
 
-import { RoomService } from "./room-service.js";
-import type { CreateRoomRequest, JoinRoomRequest } from "./room-types.js";
-
 // Security Configuration
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this";
 const SESSION_SECRET = process.env.SESSION_SECRET || "your-super-secret-session-key-change-this";
@@ -190,9 +187,6 @@ type AuthenticatedRequest = express.Request & {
 const messages: Message[] = [];
 const onlineUsers = new Map<string, OnlineUser>();
 const messageTimestamps = new Map<string, number[]>();
-
-// Initialize Room Service
-const roomService = new RoomService();
 
 // Constants
 const MAX_ONLINE_USERS = 5;
@@ -559,75 +553,6 @@ app.get("/api/online-users", requireAuth, (req: AuthenticatedRequest, res: expre
   }
 });
 
-// Create room endpoint
-app.post(
-  "/api/create-room",
-  requireAuth,
-  doubleCsrfProtection,
-  [
-    body("name").trim().isLength({ min: 2, max: 50 }),
-    body("maxParticipants").isInt({ min: 2, max: 12 }),
-    body("duration").isInt({ min: 15, max: 120 }),
-  ],
-  handleValidationErrors,
-  (req: AuthenticatedRequest, res: express.Response) => {
-    try {
-      const { name, maxParticipants, duration } = req.body;
-      const hostSessionId = req.session.userId!;
-      const user = onlineUsers.get(hostSessionId);
-      const hostName = user ? sanitizeInput(user.name) : "Unknown";
-
-      const roomRequest: CreateRoomRequest = {
-        name: sanitizeInput(name),
-        maxParticipants,
-        duration,
-        hostName
-      };
-
-      const { room } = roomService.createRoom(roomRequest, hostSessionId);
-      
-      res.json({
-        roomId: room.id,
-        room: {
-          id: room.id,
-          name: room.name,
-          expiresAt: room.expiresAt
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to create room" });
-    }
-  }
-);
-
-// Join room endpoint
-app.post(
-  "/api/join-room",
-  requireAuth,
-  doubleCsrfProtection,
-  [
-    body("roomId").trim().isLength({ min: 1 }),
-    body("name").trim().isLength({ min: 2, max: 50 }),
-  ],
-  handleValidationErrors,
-  (req: AuthenticatedRequest, res: express.Response) => {
-    try {
-      const { roomId, name } = req.body;
-      const sessionId = req.session.userId!;
-
-      const joinRequest: JoinRoomRequest = {
-        roomId,
-        participantName: sanitizeInput(name)
-      };
-
-      const result = roomService.joinRoom(joinRequest, sessionId);
-      res.json({ success: true, room: result.room });
-    } catch (error) {
-      res.status(400).json({ error: "Failed to join room" });
-    }
-  }
-);
-
 // Health check with limited info
 app.get("/health", (req, res) => {
   const healthData = {
@@ -730,75 +655,30 @@ wss.on("connection", (socket, req) => {
           // Sanitize message content
           const sanitizedText = sanitizeInput(text);
           
-          // Check if user is in a room (from URL roomId parameter)
-          const url = new URL(req.url || "", `http://${req.headers.host}`);
-          const roomId = url.searchParams.get("roomId");
+          const message: Message = {
+            id: randomUUID(),
+            user: user.name,
+            text: sanitizedText,
+            timestamp: Date.now(),
+            sanitized: true
+          };
           
-          if (roomId) {
-            // Handle room message
-            try {
-              const roomMessage = {
-                id: randomUUID(),
-                user: user.name,
-                text: sanitizedText,
-                timestamp: Date.now(),
-                roomId: roomId
-              };
-              
-              roomService.addMessage(roomId, roomMessage);
-              
-              // Broadcast to room participants only
-              const room = roomService.getRoom(roomId);
-              if (room) {
-                for (const [participantId] of room.participants) {
-                  const participant = onlineUsers.get(participantId);
-                  if (participant?.socket?.readyState === 1) {
-                    participant.socket.send(JSON.stringify({
-                      type: "message",
-                      message: roomMessage
-                    }));
-                  }
-                }
-              }
-              
-              logger.info("Room message sent", { 
-                sessionId, 
-                userName: user.name, 
-                roomId,
-                messageLength: sanitizedText.length 
-              });
-            } catch (error) {
-              socket.send(JSON.stringify({
-                type: "error",
-                error: "Failed to send room message"
-              }));
-            }
-          } else {
-            // Handle global message (fallback)
-            const message: Message = {
-              id: randomUUID(),
-              user: user.name,
-              text: sanitizedText,
-              timestamp: Date.now(),
-              sanitized: true
-            };
-            
-            messages.push(message);
-            
-            // Limit message history to prevent memory issues
-            if (messages.length > 10000) {
-              messages.splice(0, 1000); // Remove oldest 1000 messages
-            }
-            
-            broadcast({ type: "message", message });
-            
-            logger.info("Global message sent", { 
-              sessionId, 
-              userName: user.name, 
-              messageLength: sanitizedText.length 
-            });
+          messages.push(message);
+          
+          // Limit message history to prevent memory issues
+          if (messages.length > 10000) {
+            messages.splice(0, 1000); // Remove oldest 1000 messages
           }
-        } else if (msg.type === "heartbeat") {
+          
+          broadcast({ type: "message", message });
+          
+          logger.info("Message sent", { 
+            sessionId, 
+            userName: user.name, 
+            messageLength: sanitizedText.length 
+          });
+        }
+        else if (msg.type === "heartbeat") {
           user.lastActivity = Date.now();
           socket.send(JSON.stringify({ type: "pong" }));
         }

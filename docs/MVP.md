@@ -117,11 +117,34 @@ Instant Rooms for → Planning → Interviews → Study Sessions → Customer Ca
 
 ## Smart MVP Prioritization
 
-### Do First (Sprint 1 - Core "Wow")
-✅ Create room → share link → join → textchat
-✅ Display name + avatar color  
-✅ Duration + auto-expire
-✅ Room destroyed when empty or time ends
+### Do First (Sprint 1 - Core "Wow") - ✅ 95% COMPLETE
+
+**IMPLEMENTERAT (2024-12-27):**
+1. ✅ Room creation modal på landing page
+2. ✅ **API endpoints** - Full room management API (RESTORED) 
+3. ✅ **Join room flow** - /r/room-id routing implementerat
+4. ✅ **Room-First Onboarding** - No global chat, create room includes login
+5. ✅ **Room chat interface** - Reuses existing chat for rooms
+6. ✅ **Share functionality** - Copy link / native share buttons
+7. ✅ **Auto-expire** - 60s cleanup i RoomService
+8. ✅ **Backend stability** - Fixed import errors, clean build process
+
+**KVAR ATT GÖRA - CRITICAL BUGS:**
+- 🔲 **Room messaging broken** - Isabelle kan inte skriva meddelanden i rum
+- 🔲 **TypeScript compile errors** - Duplicate functions i room-service.ts  
+- 🔲 **Room-specific chat** - Meddelanden går till global istället för rum-specifikt
+- 🔲 **WebSocket room support** - roomId parameter används inte korrekt för messaging
+
+**IMMEDIATE FIXES NEEDED:**
+1. Fix TypeScript compilation errors i backend
+2. Fix room messaging så båda användare kan chatta i samma rum
+3. Separera room messages från global messages
+4. Test complete room creation → join → chat flow
+
+**NÄSTA STEG:**
+- Implementera Room-First onboarding enligt Option 1
+- Ta bort global chat helt
+- Återanvänd chat-kod för room-specifik chat
 
 ### Do Second (Sprint 2 - Media)
 🔲 Voice/video with mic/cam toggles

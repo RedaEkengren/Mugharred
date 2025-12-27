@@ -2,6 +2,19 @@
 
 All notable changes to the Mugharred project will be documented in this file.
 
+## [1.0.5] - 2025-12-27 (IN PROGRESS)
+### Added - MVP Phase 1 Implementation
+- **Room Management Foundation**: Complete room system architecture (room-types.ts, room-service.ts)
+- **Room Features**: Auto-generated room IDs (quiet-sun-5821 format), 15/30/60/120 min duration, 2-12 participants
+- **Host Controls**: Room locking, participant kicking, room management
+- **Auto-Expiry**: Rooms automatically destroyed when expired or empty
+- **Room Isolation**: Room-specific messaging and participant management
+
+### In Progress
+- **Room API Endpoints**: 9 new endpoints for room creation, joining, management
+- **Frontend Room UI**: Room creation wizard, join flow, room routing (/r/room-id)
+- **WebSocket Room Support**: Room-specific message broadcasting
+
 ## [1.0.4] - 2025-12-27
 ### Added
 - **Global English Interface**: Complete translation from Swedish to English for worldwide usage
