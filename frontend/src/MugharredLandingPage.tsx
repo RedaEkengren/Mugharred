@@ -891,59 +891,59 @@ export default function MugharredLandingPage() {
 
       {/* Header */}
       <header className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-emerald-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4 min-w-0 flex-1">
               <img 
                 src="/logo.webp" 
                 alt="Mugharred" 
-                className="h-10 w-auto rounded-xl shadow-lg ring-2 ring-white/50 hover:ring-emerald-300/50 transition-all duration-300"
+                className="h-8 lg:h-10 w-auto rounded-xl shadow-lg ring-2 ring-white/50 hover:ring-emerald-300/50 transition-all duration-300 flex-shrink-0"
               />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm lg:text-xl font-bold text-gray-900 truncate">
                   {currentRoomId ? `Room: ${currentRoomId}` : "Mugharred"}
                 </h1>
-                <p className="text-sm text-gray-600">Welcome {name}</p>
+                <p className="text-xs lg:text-sm text-gray-600 truncate">Welcome {name}</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="hidden sm:flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm text-gray-600">
+                <span className="text-xs lg:text-sm text-gray-600">
                   {wsConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
               
               {/* Share buttons - only show if in room */}
               {currentRoomId && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 lg:gap-2">
                   <button
                     onClick={copyRoomLink}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                    className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                     title="Copy room link"
                   >
-                    <Copy size={16} />
-                    Copy Link
+                    <Copy size={14} className="lg:w-4 lg:h-4" />
+                    <span className="hidden sm:inline">Copy Link</span>
                   </button>
                   
                   <button
                     onClick={shareRoom}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                    className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                     title="Share room"
                   >
-                    <Share2 size={16} />
-                    Share
+                    <Share2 size={14} className="lg:w-4 lg:h-4" />
+                    <span className="hidden sm:inline">Share</span>
                   </button>
                 </div>
               )}
               
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="flex items-center gap-1 lg:gap-2 px-2 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
-                <LogOut size={16} />
-                Log out
+                <LogOut size={14} className="lg:w-4 lg:h-4" />
+                <span className="hidden sm:inline">Log out</span>
               </button>
             </div>
           </div>
@@ -951,38 +951,39 @@ export default function MugharredLandingPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Online Users */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Users size={20} className="text-emerald-600" />
+        <div className="grid lg:grid-cols-4 gap-4 lg:gap-6">
+          {/* Online Users - On mobile: horizontal scrolling compact bar */}
+          <div className="lg:col-span-1 order-2 lg:order-1">
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 lg:p-6">
+              <h2 className="text-sm lg:text-lg font-semibold text-gray-900 mb-2 lg:mb-4 flex items-center gap-2">
+                <Users size={16} className="text-emerald-600 lg:w-5 lg:h-5" />
                 Online ({onlineUsers.length})
               </h2>
-              <div className="space-y-3">
+              {/* Mobile: horizontal scroll, Desktop: vertical stack */}
+              <div className="flex lg:flex-col gap-2 lg:gap-3 overflow-x-auto lg:overflow-x-visible lg:space-y-0">
                 {onlineUsers.map((user, index) => (
                   <div 
                     key={user} 
-                    className="flex items-center gap-3 p-2 rounded-lg bg-emerald-50"
+                    className="flex items-center gap-2 lg:gap-3 p-2 rounded-lg bg-emerald-50 flex-shrink-0"
                     style={{ animationDelay: `${index * ANIMATION_DELAY_UNIT}s` }}
                   >
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-gray-900">{user}</span>
+                    <div className="w-2 h-2 lg:w-3 lg:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs lg:text-sm font-medium text-gray-900 whitespace-nowrap">{user}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Chat */}
-          <div className="lg:col-span-3">
+          {/* Chat - Priority on mobile */}
+          <div className="lg:col-span-3 order-1 lg:order-2">
             <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden">
               {/* Messages */}
               <div 
                 ref={containerRef}
-                className="h-96 overflow-auto border-b border-gray-200"
+                className="h-64 sm:h-80 lg:h-96 overflow-auto border-b border-gray-200"
                 onScroll={handleScroll}
-                style={{ height: '400px' }}
+                style={{ height: 'auto' }}
               >
                 <div style={{ height: totalHeight, position: 'relative' }}>
                   <div style={{ transform: `translateY(${offsetY}px)` }}>
@@ -1024,8 +1025,8 @@ export default function MugharredLandingPage() {
               </div>
 
               {/* Input */}
-              <div className="p-4">
-                <div className="flex items-center gap-3">
+              <div className="p-3 lg:p-4">
+                <div className="flex items-center gap-2 lg:gap-3">
                   <input
                     ref={inputRef}
                     type="text"
@@ -1033,17 +1034,17 @@ export default function MugharredLandingPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none transition-colors"
+                    className="flex-1 px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none transition-colors text-sm lg:text-base"
                     maxLength={500}
                     disabled={!wsConnected}
                   />
                   <button
                     onClick={sendMessage}
                     disabled={!input.trim() || !wsConnected}
-                    className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
+                    className="px-4 py-2 lg:px-6 lg:py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-1 lg:gap-2 text-sm lg:text-base"
                   >
-                    <Send size={16} />
-                    Send
+                    <Send size={14} className="lg:w-4 lg:h-4" />
+                    <span className="hidden sm:inline">Send</span>
                   </button>
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
