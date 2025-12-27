@@ -1,122 +1,166 @@
 # Deployment Guide
 
-Guide for deploying Mugharred to production.
+**Current Status:** JWT + Redis stateless architecture deployed (December 27, 2024)
 
-**Status: ✅ ALREADY DEPLOYED at https://mugharred.se**
+## Production Environment
 
-This document describes how the current installation is set up and how you can update or replicate it.
+**Live at:** https://mugharred.se  
+**Architecture:** JWT + Redis + WebSocket  
+**Port:** 3010  
 
-## Produktionsmiljö
+### Server Requirements
+- Ubuntu 20.04+ Linux distribution
+- Node.js 18+ (LTS recommended)
+- Redis server (room persistence)
+- Nginx (reverse proxy + static files)
+- SSL certificate (Let's Encrypt)
+- 2GB RAM (recommended)
+- 10GB disk space
+- Firewall (ufw) configuration
 
-### Server Krav
-- Ubuntu 20.04+ eller liknande Linux distribution
-- Node.js 18+ (latest LTS recommended)
-- Redis server (för säkra sessioner - REQUIRED för säkerhet)
-- Nginx (reverse proxy + säkra headers)
-- SSL certifikat (Let's Encrypt auto-renewal)
-- Minst 1GB RAM (rekommenderat 2GB för säkerhet)
-- 10GB diskutrymme (inkl. säkerhetsloggar)
-- Firewall (ufw) för nätverkssäkerhet
+## Current Deployment
 
-### Nuvarande Setup (Live Production)
-- **Server**: Ubuntu 20.04 LTS med Nginx reverse proxy
-- **Domain**: mugharred.se (SSL aktiv)
-- **SSL**: Let's Encrypt automatiska certifikat (förnyade automatiskt)
-- **Frontend**: Statiska React build med XSS-skydd
-- **Backend**: Node.js TypeScript process på port 3001
-- **Database**: Redis för sessionslagring
-- **Security**: Enterprise-grade säkerhetsimplementering
-- **Process Manager**: PM2 med auto-restart
-- **Status**: ✅ Stabil och live sedan December 12, 2025
-- **Latest**: ✅ Global English interface and legal page modals deployed (2025-12-27)
-
-## Deployment Process
-
-### 1. Förbered Backend
-
+### Backend (Port 3010)
 ```bash
-# Gå till backend mappen
-cd backend
+cd /home/reda/development/mugharred/backend
+npm run build
+node dist/server.js &
+```
 
-# Install dependencies (includes security packages)
-npm install
+### Frontend
+```bash
+cd /home/reda/development/mugharred/frontend  
+npm run build
+sudo cp -r dist/* /var/www/html/
+```
 
-# Configure environment variables
-cp .env.example .env
-# Edit .env with production values:
-# NODE_ENV=production
-# SESSION_SECRET=<stark-slumpmässig-sträng>
-# JWT_SECRET=<stark-slumpmässig-sträng>
-# REDIS_URL=redis://localhost:6379
+### Services Running
+- **Backend:** Node.js on port 3010
+- **Redis:** Default port 6379
+- **Nginx:** Port 80/443 (reverse proxy)
 
-# Start Redis server
+## Nginx Configuration
+
+### Location: `/etc/nginx/sites-available/mugharred`
+
+```nginx
+server {
+    server_name mugharred.se;
+    
+    # Static files
+    location / {
+        root /var/www/html;
+        try_files $uri $uri/ /index.html;
+        
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|webp)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+    
+    # API endpoints
+    location /api/ {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # WebSocket
+    location /ws {
+        proxy_pass http://127.0.0.1:3010;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    
+    # SSL (Let's Encrypt)
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/mugharred.se/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mugharred.se/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+# HTTP redirect
+server {
+    if ($host = mugharred.se) {
+        return 301 https://$host$request_uri;
+    }
+    server_name mugharred.se;
+    listen 80;
+    return 404;
+}
+```
+
+## Redis Configuration
+
+### Basic Setup
+```bash
+# Install Redis
+sudo apt update
+sudo apt install redis-server
+
+# Start and enable
 sudo systemctl start redis-server
 sudo systemctl enable redis-server
 
-# Build TypeScript
-npm run build
-
-# Test that it works
-npm start
+# Verify
+redis-cli ping
+# Should return: PONG
 ```
 
-### 2. Bygg Frontend
-
+### Security
 ```bash
-# Gå till project root
-cd ..
+# Edit /etc/redis/redis.conf
+# Set password
+requirepass your_redis_password
 
-# Bygg frontend
-npm run build
+# Bind to localhost only
+bind 127.0.0.1
 
-# Kopiera till deployment mapp
-cp -r dist/* frontend/dist/
+# Restart
+sudo systemctl restart redis-server
 ```
 
-### 3. Starta Backend Process
+## SSL Certificate
 
-#### Option 1: PM2 (Rekommenderat)
-
+### Let's Encrypt Setup
 ```bash
-# Installera PM2 globalt
-npm install -g pm2
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
 
-# Skapa PM2 config
-cat > ecosystem.config.js << EOF
-module.exports = {
-  apps: [{
-    name: 'mugharred-backend',
-    script: './backend/dist/server.js',
-    instances: 1,
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3001
-    },
-    error_file: './backend/logs/err.log',
-    out_file: './backend/logs/out.log',
-    log_file: './backend/logs/combined.log',
-    time: true
-  }]
-}
-EOF
+# Get certificate
+sudo certbot --nginx -d mugharred.se
 
-# Skapa logs mapp
-mkdir -p backend/logs
-
-# Starta med PM2
-pm2 start ecosystem.config.js
-
-# Spara PM2 config
-pm2 save
-pm2 startup
+# Auto-renewal (already configured)
+sudo crontab -l | grep certbot
 ```
 
-#### Option 2: Systemd Service
+## Process Management
 
+### Manual Start
 ```bash
-# Skapa service fil
-sudo tee /etc/systemd/system/mugharred.service > /dev/null <<EOF
+# Backend
+cd /home/reda/development/mugharred/backend
+nohup node dist/server.js > /dev/null 2>&1 &
+
+# Check status
+ps aux | grep "node.*server"
+curl http://localhost:3010/health
+```
+
+### Systemd Service (Recommended)
+```bash
+# Create service file
+sudo nano /etc/systemd/system/mugharred.service
+```
+
+```ini
 [Unit]
 Description=Mugharred Backend
 After=network.target
@@ -124,325 +168,202 @@ After=network.target
 [Service]
 Type=simple
 User=reda
-WorkingDirectory=/home/reda/development/mugharred
-Environment=NODE_ENV=production
-Environment=PORT=3001
-ExecStart=/usr/bin/node backend/dist/server.js
-Restart=on-failure
+WorkingDirectory=/home/reda/development/mugharred/backend
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
 RestartSec=10
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
-EOF
+```
 
-# Ladda och starta service
+```bash
+# Enable and start
 sudo systemctl daemon-reload
 sudo systemctl enable mugharred
 sudo systemctl start mugharred
 
-# Kontrollera status
+# Check status
 sudo systemctl status mugharred
 ```
 
-### 4. Nginx Konfiguration
+## Deployment Script
 
-Nginx är redan konfigurerat för mugharred.se. Kontrollera att konfigurationen är aktiv:
-
+### Create: `scripts/deploy-production.sh`
 ```bash
-# Kontrollera att config är länkad
-sudo ls -la /etc/nginx/sites-enabled/mugharred
-
-# Om inte, länka den
-sudo ln -s /etc/nginx/sites-available/mugharred /etc/nginx/sites-enabled/
-
-# Testa nginx config
-sudo nginx -t
-
-# Ladda om nginx
-sudo systemctl reload nginx
-```
-
-### 5. SSL Certifikat
-
-SSL certifikaten hanteras automatiskt av Let's Encrypt:
-
-```bash
-# Förnya certifikat (körs automatiskt)
-sudo certbot renew --dry-run
-
-# Kontrollera certifikat status
-sudo certbot certificates
-```
-
-## Automatisk Deployment
-
-### Deploy Script
-
-Skapa ett deploy script för framtida uppdateringar:
-
-```bash
-cat > deploy.sh << 'EOF'
 #!/bin/bash
 set -e
 
-echo "🚀 Deploying Mugharred..."
-
-# Pull latest changes (if using git)
-# git pull origin main
-
-# Install/update dependencies
-echo "📦 Installing dependencies..."
-npm install
-cd backend && npm install && cd ..
-
-# Build frontend
-echo "🔨 Building frontend..."
-npm run build
-cp -r dist/* frontend/dist/
+echo "🚀 DEPLOYING TO PRODUCTION"
 
 # Build backend
-echo "🔨 Building backend..."
-cd backend && npm run build && cd ..
+cd backend
+npm run build
 
-# Restart backend process
-echo "🔄 Restarting backend..."
-if command -v pm2 > /dev/null; then
-    pm2 restart mugharred-backend
-else
-    sudo systemctl restart mugharred
-fi
+# Build frontend  
+cd ../frontend
+npm run build
 
-# Reload nginx
-echo "🌐 Reloading nginx..."
-sudo systemctl reload nginx
+# Deploy frontend
+sudo cp -r dist/* /var/www/html/
 
-echo "✅ Deployment complete!"
-echo "🌍 Site available at: https://mugharred.se"
-EOF
+# Restart backend service
+sudo systemctl restart mugharred
 
-chmod +x deploy.sh
-```
+# Verify deployment
+sleep 5
+curl -s http://localhost:3010/health | jq '.status'
 
-### Användning av Deploy Script
-
-```bash
-./deploy.sh
+echo "✅ DEPLOYMENT COMPLETE"
+echo "Live at: https://mugharred.se"
 ```
 
 ## Monitoring
 
-### Loggar
-
-#### PM2 Loggar
+### Health Check
 ```bash
-# Visa live loggar
-pm2 logs mugharred-backend
-
-# Visa specifika loggar
-pm2 logs mugharred-backend --lines 100
+curl https://mugharred.se/api/health
 ```
 
-#### Systemd Loggar
+Expected response:
+```json
+{
+  "status": "ok",
+  "timestamp": 1234567890,
+  "auth": "jwt", 
+  "storage": "redis",
+  "rooms": 0,
+  "participants": 0,
+  "websockets": 0
+}
+```
+
+### Logs
 ```bash
-# Visa live loggar
+# Backend logs (if using systemd)
 sudo journalctl -u mugharred -f
 
-# Visa senaste loggar
-sudo journalctl -u mugharred --lines=100
+# Nginx logs
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+
+# Redis logs
+sudo tail -f /var/log/redis/redis-server.log
 ```
 
-#### Nginx Loggar
-```bash
-# Access loggar
-sudo tail -f /var/log/nginx/mugharred.access.log
+## Security
 
-# Error loggar  
-sudo tail -f /var/log/nginx/mugharred.error.log
+### Firewall (ufw)
+```bash
+# Basic rules
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
 ```
 
-### Hälsokontroll
-
+### File Permissions
 ```bash
-# Kontrollera backend hälsa
-curl https://mugharred.se/health
+# Web files
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 644 /var/www/html
+sudo find /var/www/html -type d -exec chmod 755 {} \;
 
-# Kontrollera frontend
-curl -I https://mugharred.se
-
-# Kontrollera WebSocket (med websocat)
-echo '{"type":"ping"}' | websocat wss://mugharred.se/ws?sessionId=test
+# Backend files
+sudo chown -R reda:reda /home/reda/development/mugharred
+chmod +x scripts/*.sh
 ```
 
-### Performance Monitoring
+## Troubleshooting
 
-#### Basic System Monitoring
+### Common Issues
+
+1. **Backend not starting**
+   ```bash
+   # Check port in use
+   sudo lsof -i :3010
+   
+   # Check logs
+   sudo journalctl -u mugharred --no-pager
+   ```
+
+2. **Redis connection failed**
+   ```bash
+   # Check Redis status
+   sudo systemctl status redis-server
+   
+   # Test connection
+   redis-cli ping
+   ```
+
+3. **SSL certificate issues**
+   ```bash
+   # Check certificate
+   sudo certbot certificates
+   
+   # Renew if needed
+   sudo certbot renew
+   ```
+
+4. **WebSocket not connecting**
+   ```bash
+   # Check nginx config
+   sudo nginx -t
+   
+   # Reload nginx
+   sudo systemctl reload nginx
+   ```
+
+## Backup Strategy
+
+### Automated Backup (Optional)
 ```bash
-# CPU och minne
-htop
-
-# Disk användning
-df -h
-
-# Network connections
-sudo netstat -tlpn | grep :3001
-```
-
-#### Application Monitoring
-```bash
-# PM2 monitoring
-pm2 monit
-
-# Real-time stats
-pm2 status
-```
-
-## Backup
-
-### Automatisk Backup (För framtida databas)
-
-```bash
-# Skapa backup script
-cat > backup.sh << 'EOF'
+# Create backup script
 #!/bin/bash
-BACKUP_DIR="/home/reda/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/home/reda/backups/$DATE"
 
 mkdir -p $BACKUP_DIR
 
 # Backup application code
-tar -czf "$BACKUP_DIR/mugharred_$DATE.tar.gz" \
-    /home/reda/development/mugharred \
-    --exclude=node_modules \
-    --exclude=dist \
-    --exclude=logs
+tar -czf $BACKUP_DIR/mugharred-app.tar.gz /home/reda/development/mugharred
 
-# Keep only last 7 days of backups
-find $BACKUP_DIR -name "mugharred_*.tar.gz" -mtime +7 -delete
+# Backup nginx config
+cp /etc/nginx/sites-available/mugharred $BACKUP_DIR/
 
-echo "Backup created: mugharred_$DATE.tar.gz"
-EOF
+# Redis data (if needed)
+cp /var/lib/redis/dump.rdb $BACKUP_DIR/ 2>/dev/null || true
 
-chmod +x backup.sh
-
-# Schemalägg med crontab
-(crontab -l 2>/dev/null; echo "0 2 * * * /home/reda/development/mugharred/backup.sh") | crontab -
+echo "Backup created: $BACKUP_DIR"
 ```
 
-## Säkerhet
+## Performance Optimization
 
-### Brandvägg
-```bash
-# Tillåt endast nödvändiga portar
-sudo ufw allow 22    # SSH
-sudo ufw allow 80    # HTTP (omdirigering till HTTPS)
-sudo ufw allow 443   # HTTPS
-sudo ufw enable
-```
+### Nginx Optimizations
+- Gzip compression enabled
+- Static file caching (1 year)
+- HTTP/2 support
+- Keep-alive connections
 
-### Updates
-```bash
-# Håll systemet uppdaterat
-sudo apt update && sudo apt upgrade -y
+### Backend Optimizations  
+- JWT stateless (no session lookup)
+- Redis connection pooling
+- WebSocket connection limits
+- Auto-cleanup inactive rooms
 
-# Update Node.js packages regelbundet
-npm audit && npm audit fix
-cd backend && npm audit && npm audit fix
-```
+## Scaling Considerations
 
-## Felsökning
+### Horizontal Scaling
+- Load balancer (nginx upstream)
+- Redis Cluster for multiple instances
+- WebSocket sticky sessions
+- CDN for static assets
 
-### Vanliga Problem
-
-1. **Backend startar inte**
-   ```bash
-   # Kontrollera loggar
-   pm2 logs mugharred-backend
-   # eller
-   sudo journalctl -u mugharred -n 50
-   ```
-
-2. **Legal page links broken** ⚠️ FIXED 2025-12-27  
-   ```bash
-   # CRITICAL FIX IMPLEMENTED:
-   # Problem: Footer links pointed to non-existent HTML files (/privacy.html, /terms.html, /about.html)
-   # Solution: Implemented React modal system for Privacy, Terms, About pages
-   # Compliance: Removed unauthorized HTML files as per Golden Rules
-   
-   # Verify modal system works:
-   # 1. Visit https://mugharred.se
-   # 2. Scroll to footer
-   # 3. Click Privacy Policy, Terms, or About
-   # 4. Modal should open with full content
-   ```
-
-3. **WebSocket connections fail** ⚠️ FIXED 2025-12-12
-   ```bash
-   # CRITICAL FIX IMPLEMENTED:
-   # Problem: Users were prematurely removed from onlineUsers Map by broadcast()
-   # Solution: Updated broadcast logic for correct handling
-   
-   # DEBUG STEPS:
-   # Kontrollera att backend lyssnar på rätt port
-   sudo netstat -tlpn | grep :3001
-   
-   # Kontrollera att users finns kvar i onlineUsers efter login
-   pm2 logs mugharred-backend | grep "Setting user in onlineUsers"
-   
-   # Verifiera WebSocket connections
-   pm2 logs mugharred-backend | grep "WebSocket connected"
-   
-   # Kontrollera nginx WebSocket config
-   sudo nginx -t
-   ```
-
-3. **Frontend visar inte uppdateringar**
-   ```bash
-   # Kontrollera att nya filer är deployade
-   ls -la frontend/dist/
-   
-   # Rensa browser cache
-   # Kontrollera nginx caching headers
-   ```
-
-4. **SSL certifikat problem**
-   ```bash
-   # Kontrollera certifikat
-   sudo certbot certificates
-   
-   # Förnya manuellt
-   sudo certbot renew
-   ```
-
-### Prestanda Tuning
-
-1. **Nginx Optimering**
-   - Justera worker processes
-   - Optimera buffer sizes
-   - Konfigurera caching
-
-2. **Node.js Optimering**
-   - Använd PM2 cluster mode
-   - Övervaka minne användning
-   - Optimera garbage collection
-
-3. **Database (för framtiden)**
-   - Index viktiga fält
-   - Connection pooling
-   - Query optimering
-
-## Skalning
-
-### Horisontell Skalning
-
-För framtida tillväxt:
-
-1. **Load Balancer**: Nginx upstream med flera backend servrar
-2. **Database**: PostgreSQL/MongoDB cluster
-3. **Redis**: Session store och caching
-4. **CDN**: Statiska resurser
-
-### Vertikal Skalning
-
-1. **RAM**: Öka för fler samtidiga användare
-2. **CPU**: Öka för bättre WebSocket prestanda
-3. **Storage**: SSD för bättre I/O prestanda
+### Monitoring
+- Application metrics
+- Redis performance monitoring
+- nginx access/error logs
+- System resource monitoring
