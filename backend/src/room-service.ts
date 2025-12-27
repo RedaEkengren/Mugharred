@@ -68,8 +68,8 @@ export class RoomService {
     return { room, roomLink };
   }
   
-  // Get room info (for join preview)
-  getRoom(roomId: string): Room | null {
+  // Get room info (for join preview)  
+  getRoomInfo(roomId: string): Room | null {
     return this.rooms.get(roomId) || null;
   }
   
@@ -133,8 +133,8 @@ export class RoomService {
     return true;
   }
   
-  // Add message to room
-  addMessage(roomId: string, sessionId: string, text: string): RoomMessage | null {
+  // Add message to room (via sessionId)
+  addRoomMessage(roomId: string, sessionId: string, text: string): RoomMessage | null {
     const room = this.rooms.get(roomId);
     if (!room) return null;
     
@@ -231,12 +231,12 @@ export class RoomService {
     }
   }
   
-  // Get room by ID
+  // Get room by ID (for server.ts compatibility)
   getRoom(roomId: string): Room | undefined {
     return this.rooms.get(roomId);
   }
 
-  // Add message to room
+  // Add message to room (via message object)
   addMessage(roomId: string, message: any): void {
     const room = this.rooms.get(roomId);
     if (!room) {
@@ -248,7 +248,8 @@ export class RoomService {
       user: message.user,
       text: message.text,
       timestamp: message.timestamp,
-      roomId: roomId
+      roomId: roomId,
+      sessionId: message.sessionId || 'unknown'
     };
     
     room.messages.push(roomMessage);

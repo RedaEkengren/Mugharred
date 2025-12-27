@@ -742,7 +742,8 @@ wss.on("connection", (socket, req) => {
                 user: user.name,
                 text: sanitizedText,
                 timestamp: Date.now(),
-                roomId: roomId
+                roomId: roomId,
+                sessionId: sessionId
               };
               
               roomService.addMessage(roomId, roomMessage);
