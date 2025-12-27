@@ -1,8 +1,0 @@
-# Fix för att lägga till WebP support i nginx config
-# Lägg till webp till static assets regex
-
-# Före:
-        # location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-
-# Efter:
-        # location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|webp)$ {

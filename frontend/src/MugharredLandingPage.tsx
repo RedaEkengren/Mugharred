@@ -437,10 +437,11 @@ export default function MugharredLandingPage() {
         reconnectAttempts = 0;
         
         // If we have a room, join it
-        if (currentRoomId) {
+        if (currentRoomId && name) {
           socket.send(JSON.stringify({
             type: 'join_room',
-            roomId: currentRoomId
+            roomId: currentRoomId,
+            name: name
           }));
         }
         
@@ -513,7 +514,7 @@ export default function MugharredLandingPage() {
     }
 
     connect();
-  }, [sessionId, currentRoomId]);
+  }, [sessionId, currentRoomId, name]);
 
   // Connect WebSocket when logged in
   useEffect(() => {
@@ -616,7 +617,7 @@ export default function MugharredLandingPage() {
         method: "POST",
         body: JSON.stringify({ 
           roomId: currentRoomId,
-          name: userName 
+          participantName: userName 
         }),
       });
       
