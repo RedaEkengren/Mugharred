@@ -983,7 +983,6 @@ export default function MugharredLandingPage() {
                 ref={containerRef}
                 className="h-64 sm:h-80 lg:h-96 overflow-auto border-b border-gray-200"
                 onScroll={handleScroll}
-                style={{ height: 'auto' }}
               >
                 <div style={{ height: totalHeight, position: 'relative' }}>
                   <div style={{ transform: `translateY(${offsetY}px)` }}>
