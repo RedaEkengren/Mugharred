@@ -86,3 +86,25 @@ export function validateRoomSettings(settings: CreateRoomRequest): string[] {
   
   return errors;
 }
+
+// Phase 2: WebRTC Extensions
+export interface WebRTCSignal {
+  type: 'offer' | 'answer' | 'ice-candidate';
+  from: string;
+  to: string;
+  data: any;
+}
+
+export interface ParticipantVoiceState {
+  connectionId: string;
+  peerState: 'disconnected' | 'connecting' | 'connected';
+  isMuted: boolean;
+  isPTT: boolean;
+}
+
+// Extend Room interface in implementation
+export interface RoomVoiceSettings {
+  voiceEnabled: boolean;
+  passcode?: string;
+  maxVoiceParticipants: number;
+}

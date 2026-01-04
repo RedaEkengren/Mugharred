@@ -13,6 +13,19 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+export function getUserIdFromToken(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId || null;
+  } catch (error) {
+    console.error('Failed to decode JWT token:', error);
+    return null;
+  }
+}
+
 // Override fetch to add JWT token
 const originalFetch = window.fetch;
 window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {

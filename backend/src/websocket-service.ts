@@ -118,15 +118,25 @@ export class StatelessWebSocketService {
 
   private async handleMessage(connectionId: string, raw: any) {
     const connection = this.connections.get(connectionId);
-    if (!connection) return;
+    if (!connection) {
+      console.log(`❌ No connection found for ${connectionId}`);
+      return;
+    }
+
+    console.log(`📩 Raw WebSocket message received:`, { 
+      connectionId, 
+      rawData: raw.toString(),
+      user: connection.user.name 
+    });
 
     try {
       connection.lastActivity = Date.now();
       const msg = JSON.parse(raw.toString());
 
-      console.log(`📨 WebSocket message:`, { 
+      console.log(`📨 WebSocket message parsed:`, { 
         connectionId, 
         type: msg.type,
+        fullMessage: msg,
         user: connection.user.name 
       });
 
@@ -147,6 +157,7 @@ export class StatelessWebSocketService {
         case "leave_room":
           await this.handleLeaveRoom(connectionId);
           break;
+          
           
         default:
           this.sendToConnection(connectionId, {
@@ -306,13 +317,15 @@ export class StatelessWebSocketService {
     }
   }
 
-  private async broadcastToRoom(roomId: string, message: any) {
+  private async broadcastToRoom(roomId: string, message: any, excludeUserId?: string) {
     console.log(`🔊 Broadcasting to room ${roomId}:`, message.type);
     let broadcastCount = 0;
     
     for (const [connId, connection] of this.connections.entries()) {
       console.log(`🔍 Connection ${connId}: roomId=${connection.currentRoomId}, user=${connection.user.name}`);
-      if (connection.currentRoomId === roomId && connection.socket.readyState === WebSocket.OPEN) {
+      if (connection.currentRoomId === roomId && 
+          connection.socket.readyState === WebSocket.OPEN &&
+          (!excludeUserId || connection.user.userId !== excludeUserId)) {
         this.sendToConnection(connId, message);
         broadcastCount++;
         console.log(`📤 Sent to ${connection.user.name}`);

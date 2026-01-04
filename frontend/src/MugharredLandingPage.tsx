@@ -4,6 +4,9 @@ import {
   CheckCircle2, AlertCircle, Loader2, LogOut, Eye, Share2, Copy
 } from "lucide-react";
 import DOMPurify from "dompurify";
+import { useJanusVoice } from './useJanusVoice';
+import { VoiceControls } from './VoiceControls';
+// getUserIdFromToken moved to useJanusVoice.ts
 
 type Message = {
   id: string;
@@ -252,6 +255,18 @@ export default function MugharredLandingPage() {
   const [expandedMessage, setExpandedMessage] = useState<Message | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  // Voice chat state
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const { 
+    isMuted, 
+    isConnected: voiceConnected, 
+    toggleMute,
+    leaveVoice
+  } = useJanusVoice({
+    roomId: currentRoomId,
+    enabled: voiceEnabled
+  });
 
   // Refs
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -410,6 +425,8 @@ export default function MugharredLandingPage() {
       showToast("Logout error", "error");
     }
   };
+
+  // Store voice enabled in ref to avoid stale closure
 
   const connectWebSocket = useCallback(() => {
     if (!sessionId) return;
@@ -654,6 +671,25 @@ export default function MugharredLandingPage() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  // Voice toggle function (Janus Gateway)
+  const handleToggleVoice = async () => {
+    if (!voiceEnabled) {
+      try {
+        setVoiceEnabled(true);
+        console.log('🎙️ Joining voice room via Janus Gateway');
+        showToast('Connecting to voice room...', 'info');
+      } catch (error) {
+        console.error('Failed to join voice:', error);
+        showToast('Failed to join voice room', 'error');
+      }
+    } else {
+      setVoiceEnabled(false);
+      leaveVoice();
+      console.log('🎙️ Left voice room');
+      showToast('Left voice room', 'info');
     }
   };
 
@@ -938,6 +974,19 @@ export default function MugharredLandingPage() {
                 </div>
               )}
               
+              {/* Voice controls - only show if in room */}
+              {currentRoomId && (
+                <div className="hidden sm:block">
+                  <VoiceControls
+                    isConnected={voiceConnected}
+                    isMuted={isMuted}
+                    onToggleMute={toggleMute}
+                    onToggleVoice={handleToggleVoice}
+                    isPTT={false}
+                  />
+                </div>
+              )}
+              
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-1 lg:gap-2 px-2 lg:px-4 py-1 lg:py-2 text-xs lg:text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -972,6 +1021,20 @@ export default function MugharredLandingPage() {
                   </div>
                 ))}
               </div>
+              
+              {/* Mobile Voice Controls */}
+              {currentRoomId && (
+                <div className="sm:hidden mt-4 pt-4 border-t border-gray-200">
+                  <VoiceControls
+                    isConnected={voiceConnected}
+                    isMuted={isMuted}
+                    onToggleMute={toggleMute}
+                    onToggleVoice={handleToggleVoice}
+                    isPTT={false}
+                    compact={true}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

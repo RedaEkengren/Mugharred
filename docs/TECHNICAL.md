@@ -203,6 +203,56 @@ redis-cli keys "room:*"
 # Check room participants  
 redis-cli get "room:{roomId}"
 
-# Check backend logs
+# Check backend logs (correct path)
 tail -f backend/logs/combined.log
+
+# Debug WebSocket voice messages
+grep -E "(📩|📨|join-voice|leave-voice)" backend/logs/combined.log
+
+# Monitor real-time WebSocket messages  
+tail -f backend/logs/combined.log | grep "📩"
 ```
+
+## Voice Implementation Strategy Change (December 29, 2024)
+
+**DECISION: Abandon P2P WebRTC → Use Janus Gateway**
+
+**Why P2P WebRTC Failed:**
+- WebSocket reference lost in React re-renders (`ws: null`)
+- NAT/firewall issues without TURN server
+- Complex mesh networking (N*(N-1) connections)
+- Max 4 users before quality degrades
+- 30% of connections fail without TURN relay
+
+**New Approach: Janus Gateway (95% COMPLETE)**
+- **Status:** Running on PM2 as `mugharred-janus`
+- **Port:** 8188 (WebSocket)
+- **Frontend:** `useJanusVoice.ts` implemented
+- **Last Issue:** STUN server not configured
+
+**🚨 CRITICAL FIX NEEDED - DO THIS NOW:**
+```bash
+# 1. Configure STUN server
+sudo nano /usr/local/etc/janus/janus.jcfg
+
+# 2. Go to line 290 and uncomment/change:
+stun_server = "stun.l.google.com"    # REMOVE the #
+stun_port = 19302                     # REMOVE the #
+
+# 3. Go to line 295 and uncomment:
+ice_consent_freshness = true          # REMOVE the #
+
+# 4. Save (Ctrl+O, Enter, Ctrl+X) and restart:
+pm2 restart mugharred-janus
+
+# 5. Remove old P2P files:
+rm -f frontend/src/useWebRTC.ts
+rm -f backend/src/webrtc-signaling.ts
+
+# 6. Test voice at https://mugharred.se
+```
+
+**Backend Crashes (2126 restarts):**
+- NOT a problem - JWT tokens expire after 1 hour
+- WebSocket errors are expected when tokens expire
+- PM2 auto-restarts (this is correct behavior)

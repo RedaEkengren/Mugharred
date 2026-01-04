@@ -1,7 +1,8 @@
 # Mugharred - Instant Rooms Platform
 
 **Live at:** https://mugharred.se  
-**Status:** 🚀 Phase 1 MVP Complete - Production Ready! (December 27, 2024)
+**Status:** 🚀 Phase 1 MVP Complete - Production Ready! (December 28, 2024)  
+**Structure:** ✅ Clean canonical structure following goldenrules.md
 
 ## What is Mugharred?
 
@@ -61,11 +62,13 @@ node backend/dist/server.js
 - ✅ WebSocket real-time communication
 - ✅ Enterprise-grade security
 
-### Phase 2 - Media (Next)
-- 🔄 Voice/video calling (WebRTC P2P)
-- 🔄 Host controls (kick, mute, extend time, lock room)
-- 🔄 Screen sharing
-- 🔄 Audio-only mode
+### Phase 2 - Voice/Video (95% Complete - ONE FIX NEEDED)
+- ✅ **NEW**: Janus Gateway implementation (not P2P)
+- ✅ Voice chat for 20-30 users ready
+- ✅ Janus running on PM2
+- ✅ Frontend voice UI complete
+- 🔴 **LAST FIX NEEDED**: Enable STUN server in Janus config
+- 🔴 **DO THIS**: `sudo nano /usr/local/etc/janus/janus.jcfg` → uncomment line 290-292
 
 ### Phase 3 - Enhanced Features
 - 🔄 Room templates (Interview, Planning, Study)
@@ -86,10 +89,17 @@ node backend/dist/server.js
 mugharred/
 ├── backend/          # JWT + Redis backend (port 3010)
 ├── frontend/         # React frontend  
-├── scripts/          # Deployment scripts
+├── scripts/          # Deployment & maintenance scripts
 ├── docs/            # Documentation
-└── goldenrules.md   # Development guidelines
+├── logs/            # Application logs
+└── goldenrules.md   # Development guidelines (MANDATORY)
 ```
+
+**Clean Structure Guarantee:**
+- ✅ No backup files or directories
+- ✅ No .tmp, .old, or duplicate files  
+- ✅ Single source of truth for each component
+- ✅ GitHub serves as version control (no local backups needed)
 
 ## Development Rules
 

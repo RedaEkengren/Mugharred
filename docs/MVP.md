@@ -53,36 +53,115 @@ Transform current open chat into instant rooms system:
    - Rate limiting on joins
    - No message history after room expires
 
-### Phase 2: Enhanced Communication (v1.1)
-5. **WebRTC Integration**
-   - Voice chat with push-to-talk option
-   - Video with cam on/off toggle
-   - Mute by default option
-   - P2P for small rooms (2-4), consider SFU for larger
+### Phase 2: Enhanced Communication (v1.1) - UPDATED STRATEGY
 
-6. **Room Roles**
-   - Host (creator) with admin powers
-   - Speaker/Listener modes for presentations
-   - Lobby mode (host approves joins)
+**Strategy:** Server-based approach using Janus Gateway for reliable voice/video
 
-7. **Share & Invite**
-   - Copy link button
-   - Optional passcode
-   - Share to social/messaging apps
+#### Sprint 2A: Voice Foundation with Janus (1 week)
+**Goal:** Reliable voice chat for 2-20 users using Janus Gateway
 
-### Phase 3: Light Features (v1.2)
-8. **Templates**
-   - Pre-configured room types: Interview, Planning, Study Session
-   - Just presets, not different products
+1. **Janus Gateway Setup**
+   - Deploy Janus on Digital Ocean VM (2 vCPU, 4GB RAM)
+   - Configure AudioBridge plugin for voice rooms
+   - Setup WebSocket transport for signaling
+   - Nginx proxy configuration
 
-9. **Link Sharing & Preview**
-   - Safe link preview for images
-   - Pin important messages
-   - NO file uploads in MVP (legal/abuse risks)
+2. **Voice Integration**
+   - Replace P2P WebRTC with Janus client
+   - Simple join/leave voice functionality
+   - Mute/unmute controls
+   - Audio level indicators
+   - Automatic echo cancellation
 
-10. **Monetization (Optional)**
-    - Free: 30-60 min rooms, max 4 video participants
-    - Supporter (€5/mo): longer rooms, more participants, passcode protection
+3. **Room Integration**
+   - Link Janus rooms to Mugharred room IDs
+   - Automatic room creation/destruction
+   - Participant sync between chat and voice
+
+4. **Push-to-Talk**
+   - Spacebar for PTT mode
+   - Toggle between PTT and open mic
+   - Visual PTT indicators
+
+#### Sprint 2B: Scale & Host Controls (1 week)  
+**Goal:** Support 20+ users with host moderation
+
+5. **Scalability**
+   - Janus handles up to 20-30 concurrent audio streams
+   - No P2P mesh complexity
+   - Server-side audio mixing
+   - Consistent quality for all participants
+
+6. **Host Powers**
+   - Kick participants
+   - Mute others (force mute)
+   - Extend room timer
+   - Lock room (no new joins)
+   - Transfer host role
+
+7. **Quality Features**
+   - Connection quality indicators
+   - Automatic quality adjustment
+   - Reconnection handling
+   - "Poor connection" warnings
+
+#### Sprint 2C: Video Enhancement (1 week)
+**Goal:** Add video support via Janus VideoRoom plugin
+
+8. **Video Streams**
+   - Enable Janus VideoRoom plugin
+   - Camera on/off toggle
+   - Video preview before enabling
+   - Grid layout (supports 10+ participants)
+   - Adaptive bitrate (server-controlled)
+
+9. **Performance**
+   - Janus handles video routing efficiently
+   - Simulcast support (multiple quality streams)
+   - Audio-only mode for bandwidth saving
+   - Mobile optimization built-in
+
+#### Sprint 2D: Production Features (1 week)
+**Goal:** Polish and security
+
+10. **Security & Reliability**
+    - TURN server integration (coturn on same VM)
+    - Room passwords via Janus
+    - Connection quality indicators
+    - Automatic reconnection
+
+11. **Advanced Features**
+    - Screen sharing via Janus
+    - Recording capability (optional)
+    - Lobby/waiting room
+    - Participant statistics
+
+**ACHIEVED IN PHASE 2 WITH JANUS:**
+- ✅ 20-30 concurrent users per room
+- ✅ Reliable voice/video for all network conditions
+- ✅ No P2P complexity or debugging
+- ✅ Server-side control and moderation
+- ✅ Professional quality audio/video
+
+### Phase 3: Enhanced Features (v1.2)
+
+8. **Room Templates**
+   - Pre-configured room types with Janus settings:
+     - Interview: 2 person, high quality video
+     - Planning: Audio-only, 20 participants
+     - Study Session: Video grid, screen share enabled
+     - Webinar: 1 presenter, many viewers
+
+9. **Advanced Janus Features**
+   - Recording rooms (stored on VM)
+   - Live streaming to YouTube/Twitch
+   - Breakout rooms (multiple Janus rooms)
+   - Virtual backgrounds (Janus plugin)
+
+10. **Monetization**
+    - Free: 30 min rooms, 10 participants, audio only
+    - Pro (€5/mo): 2 hour rooms, 30 participants, video enabled
+    - Business (€20/mo): Unlimited time, 100 participants, recording
 
 ## Landing Page Copy
 
@@ -97,23 +176,36 @@ Instant Rooms for → Planning → Interviews → Study Sessions → Customer Ca
 
 ## Technical Architecture for Instant Rooms
 
-### Current Stack (Keep)
-- Frontend: React + TypeScript + Tailwind
-- Backend: Node.js + Express + WebSocket
-- Security: Redis sessions, CSRF, rate limiting
-- Deployment: PM2 + Nginx
+### Current Stack (Phase 1 Complete)
+- Frontend: React + TypeScript + Tailwind ✅
+- Backend: Node.js + Express + WebSocket ✅
+- Authentication: JWT tokens (stateless) ✅
+- Storage: Redis for rooms (with TTL) ✅
+- Security: Rate limiting, sanitization ✅
+- Deployment: Nginx reverse proxy ✅
 
-### New Components Needed
-- Room management service
-- WebRTC signaling 
-- Timer/expiry system
-- Room state in Redis (temporary)
+### Phase 2 Components Needed
+- Janus Gateway on Digital Ocean VM (already have: 2vCPU, 4GB RAM)
+- Janus JavaScript client library
+- Integration with existing JWT auth
+- Room synchronization Janus ↔ Mugharred
+- Nginx proxy for Janus WebSocket
+- Optional: coturn on same VM for reliability
 
-### Scaling Strategy
-- Start with P2P WebRTC (light on server)
-- Add SFU later if needed (LiveKit/mediasoup)
-- Keep text chat as primary (low bandwidth)
-- Video as optional enhancement
+### Infrastructure Benefits
+**Your Digital Ocean VM (2 vCPU, 4GB RAM, 4TB transfer):**
+- Supports ~20-30 concurrent voice users
+- Or ~10-15 video participants
+- 4TB transfer = ~400 hours of voice chat/month
+- Can add coturn TURN server on same VM
+- Total cost: Just your existing VM (~$20-40/month)
+
+### Why Janus Instead of P2P
+- **Works immediately** - no NAT/firewall issues
+- **Scales better** - 20 users vs 4 users max
+- **Easier to implement** - less client-side complexity
+- **More reliable** - server-controlled quality
+- **Future-proof** - can add recording, streaming, etc.
 
 ## Smart MVP Prioritization
 
@@ -182,6 +274,12 @@ Instant Rooms for → Planning → Interviews → Study Sessions → Customer Ca
 
 **PHASE 1 STATUS:** 🚀 100% COMPLETE! 
 
+**STRUCTURE CLEANED (December 28, 2024):**
+✅ **Repository Cleanup:** All backup files and duplicate directories removed
+✅ **Canonical Structure:** Now follows goldenrules.md perfectly
+✅ **Single Source of Truth:** No duplicate files or alternative versions
+✅ **GitHub Integration:** All versions safely stored in version control
+
 **ALL BUGS FIXED (December 27, 2024):**
 ✅ **Port Configuration:** Backend runs on correct port 3010
 ✅ **Redis Data Structure:** Fixed Map/Object conflicts in participant storage
@@ -192,6 +290,14 @@ Instant Rooms for → Planning → Interviews → Study Sessions → Customer Ca
 ✅ **Mobile Responsiveness:** Optimized layout and UX for all screen sizes
 
 **READY FOR PRODUCTION USE! 🎉**
+
+**PHASE 2 PLANNING UPDATED (December 29, 2024):**
+- NEW APPROACH: Janus Gateway instead of P2P WebRTC
+- Sprint structure: 2A → 2B → 2C → 2D  
+- Server-based solution (more reliable than P2P)
+- Supports 20+ users instead of 4
+- Total estimate: 4 weeks (faster than P2P debugging!)
+- Infrastructure: Use existing Digital Ocean VM
 
 **PHASE 1 REWRITE SCRIPTS READY - EXECUTE IN ORDER:**
 

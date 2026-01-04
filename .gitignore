@@ -132,4 +132,4 @@ frontend/dist/
 ecosystem.config.js
 
 # Local development
-.local/
+.local/janus-gateway/
