@@ -1,11 +1,13 @@
-// Phase 2: Minimal Voice Controls (preserves design)
-import { Mic, MicOff, PhoneOff, Phone } from 'lucide-react';
+// Phase 2: Voice + Video Controls (preserves design)
+import { Mic, MicOff, PhoneOff, Phone, Video, VideoOff } from 'lucide-react';
 
 interface VoiceControlsProps {
   isConnected: boolean;
   isMuted: boolean;
+  isVideoEnabled?: boolean;
   onToggleMute: () => void;
   onToggleVoice: () => void;
+  onToggleVideo?: () => void;
   isPTT: boolean;
   compact?: boolean;
 }
@@ -13,8 +15,10 @@ interface VoiceControlsProps {
 export function VoiceControls({ 
   isConnected, 
   isMuted, 
+  isVideoEnabled = false,
   onToggleMute, 
   onToggleVoice,
+  onToggleVideo,
   isPTT,
   compact = false 
 }: VoiceControlsProps) {
@@ -35,17 +39,33 @@ export function VoiceControls({
         </button>
         
         {isConnected && (
-          <button
-            onClick={onToggleMute}
-            className={`p-2 rounded-lg transition-all ${
-              isMuted 
-                ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                : 'bg-green-100 text-green-600 hover:bg-green-200'
-            }`}
-            title={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </button>
+          <>
+            <button
+              onClick={onToggleMute}
+              className={`p-2 rounded-lg transition-all ${
+                isMuted 
+                  ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                  : 'bg-green-100 text-green-600 hover:bg-green-200'
+              }`}
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+            
+            {onToggleVideo && (
+              <button
+                onClick={onToggleVideo}
+                className={`p-2 rounded-lg transition-all ${
+                  isVideoEnabled 
+                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title={isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
+              >
+                {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              </button>
+            )}
+          </>
         )}
       </div>
     );
@@ -79,6 +99,20 @@ export function VoiceControls({
             {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             <span>{isMuted ? 'Unmute' : 'Mute'}</span>
           </button>
+          
+          {onToggleVideo && (
+            <button
+              onClick={onToggleVideo}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all text-sm ${
+                isVideoEnabled 
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+              }`}
+            >
+              {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              <span>{isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}</span>
+            </button>
+          )}
           
           {isPTT && (
             <span className="text-xs text-gray-500 ml-2">

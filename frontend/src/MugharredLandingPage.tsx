@@ -6,6 +6,10 @@ import {
 import DOMPurify from "dompurify";
 import { useJanusVoice } from './useJanusVoice';
 import { VoiceControls } from './VoiceControls';
+import { VoiceCallOverlay } from './VoiceCallOverlay';
+import { VideoCallOverlay } from './VideoCallOverlay';
+import { CallMinimized } from './CallMinimized';
+import { useCallState } from './useCallState';
 // getUserIdFromToken moved to useJanusVoice.ts
 
 type Message = {
@@ -260,12 +264,32 @@ export default function MugharredLandingPage() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const { 
     isMuted, 
-    isConnected: voiceConnected, 
+    isConnected: voiceConnected,
+    isVideoEnabled,
     toggleMute,
+    toggleVideo,
     leaveVoice
   } = useJanusVoice({
     roomId: currentRoomId,
     enabled: voiceEnabled
+  });
+
+  // Call state management (new overlay system)
+  const {
+    callMode,
+    startVoiceCall,
+    upgradeToVideo,
+    downgradeToVoice,
+    minimizeCall,
+    expandCall,
+    endCall
+  } = useCallState({
+    onVoiceToggle: () => setVoiceEnabled(true),
+    onVideoToggle: toggleVideo,
+    onCallEnd: () => {
+      setVoiceEnabled(false);
+      leaveVoice();
+    }
   });
 
   // Refs
@@ -674,21 +698,20 @@ export default function MugharredLandingPage() {
     }
   };
 
-  // Voice toggle function (Janus Gateway)
+  // Voice toggle function (using new overlay system)
   const handleToggleVoice = async () => {
-    if (!voiceEnabled) {
+    if (!voiceConnected) {
       try {
-        setVoiceEnabled(true);
-        console.log('🎙️ Joining voice room via Janus Gateway');
+        startVoiceCall();
+        console.log('🎙️ Starting voice call with overlay');
         showToast('Connecting to voice room...', 'info');
       } catch (error) {
         console.error('Failed to join voice:', error);
         showToast('Failed to join voice room', 'error');
       }
     } else {
-      setVoiceEnabled(false);
-      leaveVoice();
-      console.log('🎙️ Left voice room');
+      endCall();
+      console.log('🎙️ Ended voice call');
       showToast('Left voice room', 'info');
     }
   };
@@ -875,8 +898,14 @@ export default function MugharredLandingPage() {
 
         {/* Legal Modals - Shortened for space */}
         {activeModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => setActiveModal(null)}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">
                   {activeModal === 'privacy' && 'Privacy Policy'}
@@ -891,8 +920,97 @@ export default function MugharredLandingPage() {
                 </button>
               </div>
               <div className="p-6 overflow-auto max-h-[60vh]">
-                <div className="prose prose-emerald max-w-none">
-                  <p>Content for {activeModal} modal...</p>
+                <div className="prose prose-emerald max-w-none text-sm">
+                  {activeModal === 'privacy' && (
+                    <div>
+                      <p className="mb-4"><strong>TL;DR:</strong> Mugharred is designed for privacy. We don't store your conversations, don't require accounts, and automatically delete room data when you leave. Your privacy is protected by design.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Information We Collect</h3>
+                      <p><strong>Account Information:</strong> None. Mugharred does not require accounts or registration.</p>
+                      <p><strong>Session Information:</strong> We temporarily store minimal data needed to operate the service: display name, room membership, WebSocket connection data, JWT session tokens.</p>
+                      <p><strong>Communication Content:</strong> We do NOT store chat messages, voice call recordings, video call recordings, or file uploads.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Data Retention & Automatic Deletion</h3>
+                      <p><strong>Privacy by Design:</strong> Mugharred automatically deletes data to protect your privacy.</p>
+                      <p>Session data is automatically deleted when you leave the room, room becomes empty, after 5 minutes of inactivity, or when maximum room lifetime is reached.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Your Rights</h3>
+                      <p>Under GDPR, EU users have rights to request information, deletion, object to processing, and lodge complaints. Due to our privacy-by-design architecture, most data is automatically deleted before you could request its deletion.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Contact Us</h3>
+                      <p>Privacy questions: <a href="mailto:privacy@mugharred.se" className="text-emerald-600 hover:text-emerald-700">privacy@mugharred.se</a></p>
+                      <p>Abuse reports: <a href="mailto:abuse@mugharred.se" className="text-emerald-600 hover:text-emerald-700">abuse@mugharred.se</a></p>
+                    </div>
+                  )}
+                  
+                  {activeModal === 'terms' && (
+                    <div>
+                      <p className="mb-4"><strong>Simple Terms:</strong> Mugharred is a private communication service. Be respectful, follow the law, and understand that we provide the service "as-is" without guarantees. You're responsible for what you say and share.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Age Requirements</h3>
+                      <p className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4"><strong>Age Restriction:</strong> You must be at least 13 years old to use Mugharred. Users under 18 should have parental guidance when using online communication services.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Prohibited Uses</h3>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <p className="font-medium mb-2">You may NOT use Mugharred for:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Illegal activities or content under any applicable law</li>
+                          <li>Harassment, threats, or intimidation of others</li>
+                          <li>Sharing illegal content (including child exploitation material)</li>
+                          <li>Spam, commercial solicitation, or unsolicited advertising</li>
+                          <li>Any activity that could harm minors</li>
+                          <li>Attempting to hack, disrupt, or damage our service</li>
+                        </ul>
+                      </div>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">User Responsibility</h3>
+                      <p>You are responsible for all content you share, ensuring compliance with applicable laws, protecting room links, and reporting abuse or illegal content to us.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Service Availability</h3>
+                      <p>Mugharred is provided "AS-IS" without warranties. We do not guarantee continuous availability, error-free operation, data backup, or specific performance levels.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Enforcement and Reporting</h3>
+                      <p>Report violations or illegal content to: <a href="mailto:abuse@mugharred.se" className="text-emerald-600 hover:text-emerald-700 font-medium">abuse@mugharred.se</a></p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Contact Information</h3>
+                      <p>General inquiries: <a href="mailto:contact@mugharred.se" className="text-emerald-600 hover:text-emerald-700">contact@mugharred.se</a></p>
+                      <p>Abuse reports: <a href="mailto:abuse@mugharred.se" className="text-emerald-600 hover:text-emerald-700">abuse@mugharred.se</a></p>
+                    </div>
+                  )}
+                  
+                  {activeModal === 'about' && (
+                    <div>
+                      <p className="mb-4"><strong>Mugharred</strong> - Privacy-first instant rooms for any conversation.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">What is Mugharred?</h3>
+                      <p>Mugharred is a temporary communication platform that creates instant, private rooms for text, voice, and video conversations. No accounts required, no data stored permanently.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                      <ul className="list-disc list-inside space-y-2 mb-4">
+                        <li><strong>Instant Rooms:</strong> Create private spaces in seconds</li>
+                        <li><strong>No Registration:</strong> Just pick a name and start talking</li>
+                        <li><strong>Voice & Video:</strong> Crystal-clear communication with WebRTC technology</li>
+                        <li><strong>Auto-Delete:</strong> Rooms expire automatically, protecting your privacy</li>
+                        <li><strong>Mobile-First:</strong> Works perfectly on phones, tablets, and desktops</li>
+                        <li><strong>Secure:</strong> End-to-end encrypted connections with HTTPS</li>
+                      </ul>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Perfect For</h3>
+                      <ul className="list-disc list-inside space-y-1 mb-4">
+                        <li>Quick team meetings and catch-ups</li>
+                        <li>Private family conversations</li>
+                        <li>Study groups and collaborations</li>
+                        <li>Gaming voice chat</li>
+                        <li>Any conversation that doesn't need permanent storage</li>
+                      </ul>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Technology</h3>
+                      <p>Built with modern web technologies: React, TypeScript, WebRTC (Janus Gateway), Redis, and Node.js. Hosted in the EU with automatic SSL certificates.</p>
+                      
+                      <h3 className="text-lg font-semibold mt-6 mb-3">Privacy Promise</h3>
+                      <p className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">We don't store your conversations, don't track your activity, and automatically delete room data when sessions end. Your privacy is built into every aspect of Mugharred.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -980,8 +1098,10 @@ export default function MugharredLandingPage() {
                   <VoiceControls
                     isConnected={voiceConnected}
                     isMuted={isMuted}
+                    isVideoEnabled={isVideoEnabled}
                     onToggleMute={toggleMute}
                     onToggleVoice={handleToggleVoice}
+                    onToggleVideo={toggleVideo}
                     isPTT={false}
                   />
                 </div>
@@ -1028,8 +1148,10 @@ export default function MugharredLandingPage() {
                   <VoiceControls
                     isConnected={voiceConnected}
                     isMuted={isMuted}
+                    isVideoEnabled={isVideoEnabled}
                     onToggleMute={toggleMute}
                     onToggleVoice={handleToggleVoice}
+                    onToggleVideo={toggleVideo}
                     isPTT={false}
                     compact={true}
                   />
@@ -1150,6 +1272,44 @@ export default function MugharredLandingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Call Overlays - WhatsApp/Telegram style */}
+      {callMode === 'voice' && (
+        <VoiceCallOverlay
+          isConnected={voiceConnected}
+          isMuted={isMuted}
+          participantName={currentRoomId || "Voice Room"}
+          onToggleMute={toggleMute}
+          onUpgradeToVideo={upgradeToVideo}
+          onEndCall={endCall}
+          onMinimize={minimizeCall}
+        />
+      )}
+
+      {callMode === 'video' && (
+        <VideoCallOverlay
+          isConnected={voiceConnected}
+          isMuted={isMuted}
+          isVideoEnabled={isVideoEnabled}
+          participantName={currentRoomId || "Video Room"}
+          onToggleMute={toggleMute}
+          onToggleVideo={toggleVideo}
+          onDowngradeToVoice={downgradeToVoice}
+          onEndCall={endCall}
+          onMinimize={minimizeCall}
+        />
+      )}
+
+      {callMode === 'minimized' && (
+        <CallMinimized
+          callMode={isVideoEnabled ? 'video' : 'voice'}
+          isMuted={isMuted}
+          isVideoEnabled={isVideoEnabled}
+          participantName={currentRoomId || "Room"}
+          onExpand={expandCall}
+          onEndCall={endCall}
+        />
       )}
     </div>
   );

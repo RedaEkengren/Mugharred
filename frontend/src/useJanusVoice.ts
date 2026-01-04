@@ -13,6 +13,7 @@ interface UseJanusVoiceProps {
 export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
   const [isMuted, setIsMuted] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   
   const janusRef = useRef<any>(null);
   const sfutestRef = useRef<any>(null); // Publisher handle (like official demo)
@@ -114,8 +115,8 @@ export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
                     });
                   }
                   
-                  // Start publishing our stream (EXACT copy)
-                  publishOwnFeed(true);
+                  // Start publishing our stream (with optional video)
+                  publishOwnFeed(true, isVideoEnabled);
                   
                 } else if (event === "event") {
                   // Handle new publishers joining (EXACT copy)
@@ -146,12 +147,48 @@ export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
               onlocalstream: function(stream: MediaStream) {
                 console.log("✅ Local stream ready");
                 localStreamRef.current = stream;
-                // Start muted and sync state
+                
+                // Add local video to PIP - check for video tracks instead of state
+                const localPip = document.getElementById('local-video-pip');
+                const hasVideoTrack = stream.getVideoTracks().length > 0;
+                
+                if (localPip && hasVideoTrack) {
+                  const video = document.createElement('video');
+                  video.id = 'local-video-element';
+                  video.autoplay = true;
+                  video.muted = true; // Always mute own video to prevent echo
+                  video.setAttribute('playsinline', 'true');
+                  video.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                  `;
+                  
+                  // Clear placeholder and add video
+                  localPip.innerHTML = '';
+                  localPip.appendChild(video);
+                  
+                  // Attach local stream
+                  Janus.attachMediaStream(video, stream);
+                  console.log("✅ Local video added to PIP (detected video track)");
+                } else if (localPip && !hasVideoTrack) {
+                  // Audio-only mode - keep placeholder
+                  console.log("🎤 Audio-only local stream (no video track)");
+                }
+                
+                // Sync state with actual Janus mute status
                 setTimeout(() => {
                   if (sfutestRef.current) {
-                    sfutestRef.current.muteAudio();
-                    setIsMuted(true);
-                    console.log("🔇 Started muted");
+                    const actuallyMuted = sfutestRef.current.isAudioMuted();
+                    console.log("🔄 Actual Janus mute state:", actuallyMuted);
+                    setIsMuted(actuallyMuted);
+                    
+                    // If not muted, mute it to start properly
+                    if (!actuallyMuted) {
+                      sfutestRef.current.muteAudio();
+                      setIsMuted(true);
+                      console.log("🔇 Force muted at start");
+                    }
                   }
                 }, 100);
               },
@@ -175,20 +212,25 @@ export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
     };
 
     // Publish own feed (official demo pattern with tracks)
-    const publishOwnFeed = (useAudio: boolean) => {
+    const publishOwnFeed = (useAudio: boolean, useVideo: boolean = false) => {
       const tracks = [
         { type: 'audio', capture: useAudio, recv: false }
       ];
       
+      if (useVideo) {
+        tracks.push({ type: 'video', capture: true, recv: false });
+      }
+      
       sfutestRef.current.createOffer({
         tracks: tracks,
         success: function(jsep: any) {
-          console.log("✅ Offer created with tracks");
+          console.log("✅ Offer created with tracks", { audio: useAudio, video: useVideo });
           const publish = { 
             request: "configure", 
             audio: useAudio, 
-            video: false,
-            audiocodec: "opus"
+            video: useVideo,
+            audiocodec: "opus",
+            videocodec: useVideo ? "vp8" : undefined
           };
           sfutestRef.current.send({ message: publish, jsep: jsep });
         },
@@ -196,6 +238,78 @@ export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
           console.error("❌ createOffer error:", error);
         }
       });
+    };
+
+    // Speaker switching function for mobile video layout
+    const switchMainSpeaker = (newSpeakerId: number) => {
+      console.log(`🔄 Switching main speaker to user ${newSpeakerId}`);
+      
+      const mainSpeaker = document.getElementById('main-speaker-video');
+      const thumbnailsBar = document.getElementById('video-thumbnails-bar');
+      
+      if (!mainSpeaker || !thumbnailsBar) return;
+      
+      // Find current main speaker and new thumbnail
+      const currentMain = mainSpeaker.querySelector('.main-speaker') as HTMLVideoElement;
+      const newMainThumbnail = thumbnailsBar.querySelector(`[data-feed-id="${newSpeakerId}"]`) as HTMLVideoElement;
+      
+      if (!currentMain || !newMainThumbnail) return;
+      
+      // Get current main speaker's feed ID
+      const currentSpeakerId = currentMain.dataset.feedId;
+      
+      // Clone both video elements to preserve streams
+      const newMainVideo = newMainThumbnail.cloneNode(true) as HTMLVideoElement;
+      const newThumbnailVideo = currentMain.cloneNode(true) as HTMLVideoElement;
+      
+      // Update classes and styles for new main speaker
+      newMainVideo.className = 'remote-video-element main-speaker';
+      newMainVideo.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #000;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      `;
+      
+      // Update classes and styles for new thumbnail
+      newThumbnailVideo.className = 'remote-video-element thumbnail';
+      newThumbnailVideo.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      `;
+      
+      // Replace main speaker
+      mainSpeaker.removeChild(currentMain);
+      mainSpeaker.appendChild(newMainVideo);
+      
+      // Replace thumbnail
+      const oldThumbnailContainer = newMainThumbnail.parentElement;
+      if (oldThumbnailContainer) {
+        const newThumbnailContainer = document.createElement('div');
+        newThumbnailContainer.className = 'video-thumbnail-container';
+        newThumbnailContainer.style.cssText = `
+          width: 60px;
+          height: 80px;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          cursor: pointer;
+          flex-shrink: 0;
+          background: #1f2937;
+        `;
+        
+        newThumbnailContainer.addEventListener('click', () => switchMainSpeaker(parseInt(currentSpeakerId || '0')));
+        newThumbnailContainer.appendChild(newThumbnailVideo);
+        
+        thumbnailsBar.replaceChild(newThumbnailContainer, oldThumbnailContainer);
+      }
+      
+      console.log(`✅ Speaker switched: ${newSpeakerId} is now main speaker`);
     };
 
     // Create new remote feed (EXACT copy from official demo structure)
@@ -283,6 +397,122 @@ export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
             // Use Janus.attachMediaStream (EXACT copy from official demo)
             Janus.attachMediaStream(audio, stream);
             console.log("✅ Audio attached for feed", id);
+          } else if(track.kind === "video") {
+            // Video track handling with Speaker Focus layout for mobile-first
+            const stream = new MediaStream([track]);
+            remoteFeed.remoteTracks[mid] = stream;
+            console.log("✅ Created remote video stream:", stream);
+            
+            // Check if we're in video call overlay with speaker focus
+            const mainSpeaker = document.getElementById('main-speaker-video');
+            const thumbnailsBar = document.getElementById('video-thumbnails-bar');
+            
+            if (mainSpeaker && thumbnailsBar) {
+              // Count existing remote video feeds to determine layout
+              const existingVideos = document.querySelectorAll('.remote-video-element').length;
+              console.log(`📊 Video users: ${existingVideos + 1}, Feed ID: ${id}`);
+              
+              // Check 3-user video limit
+              if (existingVideos >= 3) {
+                console.log("❌ Video limit reached (3 users max), keeping audio only");
+                // TODO: Show notification "Video limit reached, audio only"
+                return;
+              }
+              
+              if (existingVideos === 0) {
+                // First remote user - make them main speaker
+                const video = document.createElement('video');
+                video.className = 'remote-video-element main-speaker';
+                video.id = `remotevideo${id}-${mid}`;
+                video.autoplay = true;
+                video.setAttribute('playsinline', 'true');
+                video.dataset.feedId = id.toString();
+                video.style.cssText = `
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover;
+                  background: #000;
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  z-index: 1;
+                `;
+                
+                // Replace placeholder with main speaker
+                const placeholder = document.getElementById('speaker-placeholder');
+                if (placeholder) {
+                  placeholder.style.display = 'none';
+                }
+                mainSpeaker.appendChild(video);
+                
+                Janus.attachMediaStream(video, stream);
+                console.log(`✅ User ${id} set as main speaker`);
+                
+              } else {
+                // Additional users - add as thumbnails
+                const video = document.createElement('video');
+                video.className = 'remote-video-element thumbnail';
+                video.id = `remotevideo${id}-${mid}`;
+                video.autoplay = true;
+                video.setAttribute('playsinline', 'true');
+                video.dataset.feedId = id.toString();
+                
+                // Create thumbnail container
+                const thumbContainer = document.createElement('div');
+                thumbContainer.className = 'video-thumbnail-container';
+                thumbContainer.style.cssText = `
+                  width: 60px;
+                  height: 80px;
+                  border-radius: 8px;
+                  overflow: hidden;
+                  border: 2px solid rgba(255, 255, 255, 0.3);
+                  cursor: pointer;
+                  flex-shrink: 0;
+                  background: #1f2937;
+                `;
+                
+                video.style.cssText = `
+                  width: 100%;
+                  height: 100%;
+                  object-fit: cover;
+                `;
+                
+                // Add click handler to switch speaker
+                thumbContainer.addEventListener('click', () => switchMainSpeaker(id));
+                
+                thumbContainer.appendChild(video);
+                thumbnailsBar.appendChild(thumbContainer);
+                thumbnailsBar.style.display = 'flex';
+                
+                Janus.attachMediaStream(video, stream);
+                console.log(`✅ User ${id} added as thumbnail`);
+              }
+              
+            } else {
+              // Fallback for non-overlay mode - floating video
+              const video = document.createElement('video');
+              video.className = 'remote-video-floating';
+              video.id = `remotevideo${id}-${mid}`;
+              video.autoplay = true;
+              video.setAttribute('playsinline', 'true');
+              video.style.cssText = `
+                width: 300px;
+                height: 200px;
+                position: fixed;
+                bottom: 10px;
+                right: ${10 + (id % 3) * 320}px;
+                z-index: 9999;
+                border: 2px solid #10b981;
+                border-radius: 12px;
+                object-fit: cover;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+              `;
+              document.body.appendChild(video);
+              
+              // Use Janus.attachMediaStream
+              Janus.attachMediaStream(video, stream);
+              console.log("✅ Remote video attached as floating element");
+            }
           }
         },
         oncleanup: function() {
@@ -340,10 +570,71 @@ export function useJanusVoice({ roomId, enabled }: UseJanusVoiceProps) {
     }
   }, []);
 
+  // Toggle video with proper error handling for mobile permissions
+  const toggleVideo = useCallback(async () => {
+    const newVideoState = !isVideoEnabled;
+    
+    // If enabling video, check camera permissions first
+    if (newVideoState) {
+      try {
+        // Test camera access using modern API
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' }, 
+          audio: false 
+        });
+        // Stop test stream immediately
+        stream.getTracks().forEach(track => track.stop());
+        console.log("✅ Camera permission granted");
+      } catch (error) {
+        console.error("❌ Camera permission denied or not available:", error);
+        alert("Camera access denied or not available. Please check your browser permissions.");
+        return; // Don't enable video if permission denied
+      }
+    }
+    
+    setIsVideoEnabled(newVideoState);
+    console.log(newVideoState ? "📹 Video enabled" : "📹 Video disabled");
+    
+    // Republish with new video state
+    if (sfutestRef.current && isConnected) {
+      const publishOwnFeed = (useAudio: boolean, useVideo: boolean = false) => {
+        const tracks = [
+          { type: 'audio', capture: useAudio, recv: false }
+        ];
+        
+        if (useVideo) {
+          tracks.push({ type: 'video', capture: true, recv: false });
+        }
+        
+        sfutestRef.current.createOffer({
+          tracks: tracks,
+          success: function(jsep: any) {
+            console.log("✅ Offer created with tracks", { audio: useAudio, video: useVideo });
+            const publish = { 
+              request: "configure", 
+              audio: useAudio, 
+              video: useVideo,
+              audiocodec: "opus",
+              videocodec: useVideo ? "vp8" : undefined
+            };
+            sfutestRef.current.send({ message: publish, jsep: jsep });
+          },
+          error: function(error: any) {
+            console.error("❌ createOffer error:", error);
+          }
+        });
+      };
+      
+      publishOwnFeed(true, newVideoState);
+    }
+  }, [isVideoEnabled, isConnected]);
+
   return {
     isConnected,
     isMuted,
+    isVideoEnabled,
     toggleMute,
+    toggleVideo,
     leaveVoice: () => {
       // Implementation for leaving voice
     }
