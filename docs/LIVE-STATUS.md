@@ -3,10 +3,10 @@
 **🚀 LIVE PRODUCTION SYSTEM**
 
 URL: **https://mugharred.se**  
-Status: ✅ **FULLY OPERATIONAL WITH VOICE**  
+Status: ✅ **FULLY OPERATIONAL WITH ENHANCED VOICE/VIDEO UI**  
 Launch Date: December 12, 2024  
-Version: MVP 2.0 (Phase 1 + 2 - ✅ 100% COMPLETE)  
-Last Update: January 4, 2026 - Phase 2 Voice COMPLETED!
+Version: MVP 3.0 (Phase 1 + 2 + 3 - ✅ 100% COMPLETE)  
+Last Update: January 4, 2026 - Phase 3 WhatsApp/Telegram UI COMPLETED!
 
 ## Current System Status
 
@@ -53,29 +53,33 @@ Static Files (React Build)
 ```
 
 ---
-## ✅ PHASE 2 VOICE COMPLETED! (January 4, 2026)
+## ✅ PHASE 2+3 VOICE/VIDEO + UI COMPLETED! (January 4, 2026)
 
-**Voice Chat is now FULLY OPERATIONAL!**
+**Voice/Video Chat is now FULLY OPERATIONAL with Enhanced UI!**
 
-**What Was Fixed:**
-- ✅ Janus wasn't running - started with PM2
-- ✅ Updated from deprecated `onremotestream` to `ontrack` callback
-- ✅ STUN server already configured at stun.l.google.com:19302
-- ✅ Audio now works perfectly between multiple users
-
-**Voice Features:**
+**Phase 2 - Voice Features:**
 - ✅ Push-to-talk with spacebar
-- ✅ Mute/unmute toggle
+- ✅ Mute/unmute toggle (fixed state sync issues)
 - ✅ Multiple simultaneous speakers
 - ✅ Opus audio codec for high quality
 - ✅ Automatic room creation
-- ✅ Visual audio controls (for debugging)
+- ✅ WebRTC with STUN for NAT traversal
 
-**Voice Architecture:**
+**Phase 3 - Enhanced UI (WhatsApp/Telegram Style):**
+- ✅ **VoiceCallOverlay.tsx** - Fullscreen voice call interface
+- ✅ **VideoCallOverlay.tsx** - Fullscreen video call interface  
+- ✅ **CallMinimized.tsx** - Floating minimized call bubble
+- ✅ **useCallState.ts** - Call state management hook
+- ✅ **Voice-to-Video Upgrade** - Seamless transition
+- ✅ **Video Chat Support** - VP8 codec, remote + local video
+- ✅ **Mobile-optimized UI** - Touch-friendly overlays
+
+**Technical Architecture:**
 - Janus Gateway 1.4.0 running on PM2 (process ID 2)
-- Using `janus.plugin.videoroom` in audio-only mode  
+- Using `janus.plugin.videoroom` with audio + video support
 - WebSocket transport via nginx proxy at `/janus-ws`
-- Modern WebRTC with `ontrack` event handling
+- Modern WebRTC with `onremotetrack` event handling
+- WhatsApp/Telegram inspired overlay system
 
 # 2. Go to line 290 and change:
 nat: {

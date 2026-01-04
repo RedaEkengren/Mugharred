@@ -1,9 +1,12 @@
 # CLAUDE.MD - Komplett Guide för Mugharred Projektet
 
-## PROJEKTSTATUS: 100% KOMPLETT ✅
+## PROJEKTSTATUS: FÖRBEREDELSE FÖR LANSERING 🚀
 - **Live URL**: https://mugharred.se
 - **Phase 1 MVP**: ✅ 100% funktionell instant rooms plattform
 - **Phase 2 Voice**: ✅ 100% funktionell röstchat (2026-01-04)
+- **Phase 3 Enhanced UI**: ✅ WhatsApp/Telegram-stil overlays för voice/video (2026-01-04)
+- **Phase 4 Legal**: ✅ GDPR/COPPA compliant med Privacy Policy & Terms (2026-01-04)
+- **Pre-Launch**: 🔄 Video optimization och final testing för offentlig lansering
 
 ## KRITISK INFORMATION
 
@@ -76,13 +79,16 @@ upstream mugharred_backend {
 - **Format**: Äldre `feed: id` format (funkar), INTE nya `streams: [{}]`
 
 ### Röstfunktioner som FUNGERAR
-- ✅ Push-to-talk (spacebar)
+- ✅ Push-to-talk (spacebar)  
 - ✅ Mute/unmute toggle
 - ✅ Flera samtidiga talare
 - ✅ Automatisk rum-skapande
 - ✅ WebRTC med STUN för NAT traversal
 - ✅ Opus audio codec
-- ✅ Visual audio controls (för debug)
+- ✅ WhatsApp/Telegram-stil fullscreen overlays
+- ✅ Video chat support
+- ✅ Minimizable call bubble
+- ✅ Voice-to-video upgrade
 
 ### OM RÖSTEN INTE FUNGERAR
 1. **Kontrollera att Janus körs**: `pm2 list` (mugharred-janus ska vara "online")
@@ -144,8 +150,13 @@ ss -tlnp | grep -E "(3010|6379|8188)"   # Kontrollera portar
 - `goldenrules.md` - Projektstruktur regler
 
 ### ✅ SÄKRA-ATT-ÄNDRA-FILER
-- `/frontend/src/MugharredLandingPage.tsx` - UI komponenter
+- `/frontend/src/MugharredLandingPage.tsx` - UI komponenter (minimal ändring för overlays)
 - `/frontend/src/useJanusVoice.ts` - Röst implementation  
+- `/frontend/src/VoiceCallOverlay.tsx` - Voice call fullscreen UI
+- `/frontend/src/VideoCallOverlay.tsx` - Video call fullscreen UI
+- `/frontend/src/CallMinimized.tsx` - Minimized call bubble
+- `/frontend/src/useCallState.ts` - Call state management
+- `/frontend/src/VoiceControls.tsx` - Voice/video kontroller
 - CSS/styling filer
 - Denna fil (CLAUDE.md)
 
@@ -215,15 +226,48 @@ ss -tlnp | grep -E "(3010|6379|8188)"   # Kontrollera portar
 
 ---
 
+## MONETISERING STRATEGI (Post-Launch)
+
+### Lansering-först Approach ✅
+**PRIO 1**: Video 100% funktionellt → Lansera → Observera användning → Monetisering
+- **INTE** monetisera innan video är perfekt
+- Låt användare visa naturliga beteenden och smärtpunkter
+- Identifiera var folk vill ha "lite mer"
+
+### Potentiella Modeller (Framtid)
+**1. Pro Rooms** (29-99kr per rum):
+- Längre livstid (8h/24h) 
+- Fler deltagare
+- Högre video-kvalitet
+- Custom room names
+
+**2. B2B Light** (500-2000kr/mån):
+- Teams/företag som hatar tunga verktyg
+- Egen domän/subdomän
+- SLA-light
+
+**3. One-off Payments** (49kr):
+- "Unlock room for 24h" via Swish/Stripe
+- Privacy-first, ingen konto-registrering
+
+### Målgrupp för Pengar 💰
+- **INTE**: Tonåringar, gamers, kompisar
+- **VÄL**: Intervjuer, coaching, konsultmöten, support
+- Folk som värdesätter enkelhet och diskretion
+- 49-199kr är "ingenting" för professionell användning
+
 ## 🎯 SUMMARY FÖR NÄSTA CLAUDE
 
-**Mugharred är en 100% funktionell instant rooms plattform med röstchat som körs på https://mugharred.se**
+**Mugharred är en komplett instant rooms plattform REDO FÖR LANSERING på https://mugharred.se**
 
 - **Backend**: Node.js på port 3010 (PM2: mugharred-backend)
 - **Frontend**: React deployed till /var/www/mugharred/  
 - **Röstchat**: Janus Gateway på port 8188 (PM2: mugharred-janus)
+- **Video**: Speaker focus layout med 3-user limit
+- **Legal**: GDPR/COPPA compliant med Privacy & Terms modaler  
 - **Database**: Redis på port 6379
 - **Proxy**: Nginx med SSL
 
-**Om något inte fungerar: kontrollera PM2 status först, sedan restart relevant service.**
+**PRE-LAUNCH FOCUS**: Video optimization och final testing innan offentlig lansering.**
+**MONETISERING**: Avvakta tills video är perfekt och användare visar naturliga beteenden.**
 **All viktig info finns i denna fil - ignorera andra MD-filer.**
